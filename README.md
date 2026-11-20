@@ -1,4 +1,4 @@
-[![dot-server-security - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/254-dot-server-security)
+[![Server Security - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/254-dot-server-security)
 
 Watches what happens on a dedicated server, counts it against rules an operator writes, and escalates (warn, gag, mute, kick, ban) without anybody having to be awake. It also checks join attempts against external ban lists and has server-side anti-cheat checks.
 
@@ -108,7 +108,7 @@ Any number of endpoints, merged, cached and consulted on every join.
 
 Tokens come from a file (`token_file`), never the environment or command line. dot-moderation registers under the same `dot_ban_source` name, so both are asked and both must say yes.
 
-## With and without dot-moderation
+## With and without Moderation
 
 With dot-moderation a gag is a stored, expiring, revocable record that survives a reconnect and restart. Without it, a gag is two flags on the session and is lost when the player reconnects. Both work.
 
