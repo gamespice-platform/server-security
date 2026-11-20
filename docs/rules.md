@@ -49,7 +49,7 @@ The anti-cheat has **its own** dry run, separate, because an operator commonly t
 
 A fixed bucket that resets on a boundary is walked straight through: five messages at 0.9 s and five more at 1.1 s is ten in two seconds, and a bucket sees two counts of five and trips on neither. Every rate limit written that way has eventually been defeated by somebody noticing the boundary, usually by accident.
 
-**The bounds on it are a security control, not tidiness.** A structure growing one entry per event and one bucket per address is a memory-exhaustion target reachable by exactly the traffic this addon exists to watch. Entries per subject, subjects per window and offence records are all capped, oldest first, and idle subjects are swept. Losing the oldest entries under attack is the right failure: a subject at the entry cap is hundreds of events past any sane threshold, so the rule fired long before anything was dropped. Same reasoning as dot-server-query's refusal to keep a challenge table.
+**The bounds on it are a security control, not tidiness.** A structure growing one entry per event and one bucket per address is a memory-exhaustion target reachable by exactly the traffic this addon exists to watch. Entries per subject, subjects per window and offence records are all capped, oldest first, and idle subjects are swept. Losing the oldest entries under attack is the right failure: a subject at the entry cap is hundreds of events past any sane threshold, so the rule fired long before anything was dropped. Same reasoning as GameSpice Server Query's refusal to keep a challenge table.
 
 ## The couplings, and why they are tested rather than commented
 
@@ -57,15 +57,15 @@ dot-moderation, dot-chat and dot-auth are optional, and a script mentioning a `c
 
 | Here | There | If they drift |
 | --- | --- | --- |
-| `DotSecuritySubject.PREFIX_UID` / `PREFIX_ADDRESS` | dot-moderation's `DotPunishmentSubject` | every punishment is filed against a subject nothing else can find |
-| `DotSecurityAction.MOD_KIND_*` | dot-moderation's `DotPunishment.Kind` | a gag is issued as a ban |
-| `DotSecurityWatch.REFUSAL_PERMISSION` | dot-server's `command_refused` wording | `command.denied` silently stops counting |
+| `DotSecuritySubject.PREFIX_UID` / `PREFIX_ADDRESS` | GameSpice Moderation's `DotPunishmentSubject` | every punishment is filed against a subject nothing else can find |
+| `DotSecurityAction.MOD_KIND_*` | GameSpice Moderation's `DotPunishment.Kind` | a gag is issued as a ban |
+| `DotSecurityWatch.REFUSAL_PERMISSION` | GameSpice Server's `command_refused` wording | `command.denied` silently stops counting |
 
 **All three are asserted against the real addons in the suite**, which is why they are linked into this project. A comment does not fail when the other side changes.
 
 The last one deserves naming: `command_executed` fires *only after the permission check has passed*, so it never sees a denial. `command_refused` sees every refusal and distinguishes a permission refusal from a mistyped command by a string prefix alone. Matching that prefix is the only way to tell somebody probing from somebody typing.
 
-## Acting with and without dot-moderation
+## Acting with and without GameSpice Moderation
 
 Both, always, when both can:
 
@@ -78,7 +78,7 @@ Both, always, when both can:
 
 ## Finding the moderation store
 
-**The store is found late, never latched at attach.** dot-moderation's manager is built by the game, inside a module dot-server loads *after* the listener is open, while a `DotSecurityManager` attaches as the server boots. So `moderation_store()` returns the cached answer when there is one and looks the registry up again when there is not; `is_instance_valid` covers the game change that frees the old store and builds a new one. `describe()` and `sec_status` ask the same way, and the boot line says "not yet" rather than "no moderation store". Why this matters: [history](history.md#the-guard-latched-the-moderation-store-at-boot).
+**The store is found late, never latched at attach.** GameSpice Moderation's manager is built by the game, inside a module GameSpice Server loads *after* the listener is open, while a `DotSecurityManager` attaches as the server boots. So `moderation_store()` returns the cached answer when there is one and looks the registry up again when there is not; `is_instance_valid` covers the game change that frees the old store and builds a new one. `describe()` and `sec_status` ask the same way, and the boot line says "not yet" rather than "no moderation store". Why this matters: [history](history.md#the-guard-latched-the-moderation-store-at-boot).
 
 The console surface (`sec_status`, `sec_why`, `sv_security`) is registered after the server's `state_changed`, because a guard placed beside a server is ready before the console exists.
 
@@ -86,5 +86,5 @@ The console surface (`sec_status`, `sec_why`, `sv_security`) is registered after
 
 - **A client-side component** or **wallhack detection**: see [anticheat.md](anticheat.md#what-this-cannot-do).
 - **Machine learning over aim traces.** The published work on it is real and needs a labelled dataset from your own game to be worth anything; the hooks here (`observe_aim`, `observe_trigger`) are where such a model would plug in, and a model shipped without your data would be a random number generator with a confusion matrix.
-- **Its own ban storage.** dot-moderation is the durable store and `DotBanFeeds` is the read-only external half. Two write targets is the two-lists problem.
-- **Rate limiting the game's own traffic.** dot-server's `DotAddressGuard` caps connections per address and dot-server-query rate-limits queries; both are in the right places already.
+- **Its own ban storage.** GameSpice Moderation is the durable store and `DotBanFeeds` is the read-only external half. Two write targets is the two-lists problem.
+- **Rate limiting the game's own traffic.** GameSpice Server's `DotAddressGuard` caps connections per address and GameSpice Server Query rate-limits queries; both are in the right places already.

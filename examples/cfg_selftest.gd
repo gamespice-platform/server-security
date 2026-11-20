@@ -1,6 +1,6 @@
 extends Node
 
-## The yml layout of dot-server-security's settings: new path, flat shim, operator layer.
+## The yml layout of GameSpice Server Security's settings: new path, flat shim, operator layer.
 ## Run: timeout 120 godot --headless --path . res://examples/cfg_selftest.tscn
 
 const FOLDER := "dot_server_security"

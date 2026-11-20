@@ -44,7 +44,7 @@ const AUTH_REJECTED := &"auth.rejected"
 
 
 ## A wrong RCON password.
-## The highest-value signal here: dot-server's per-address lockout is forgotten on restart; a rule over this turns a password spray into a ban.
+## The highest-value signal here: GameSpice Server's per-address lockout is forgotten on restart; a rule over this turns a password spray into a ban.
 const RCON_AUTH_FAILED := &"rcon.auth_failed"
 
 ## A command run over RCON.

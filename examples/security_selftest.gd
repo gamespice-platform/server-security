@@ -265,7 +265,7 @@ func _test_ban_feed_admission() -> void:
 			.error.message.contains("cheating"))
 	feeds.show_upstream_reason = true
 
-	# A game module loading after boot -- a changelevel -- registers dot-moderation
+	# A game module loading after boot -- a changelevel -- registers GameSpice Moderation
 	# under the same name, and the registry is last-wins. Captured once at _ready,
 	# the feeds were displaced from every admission after the first level change.
 	var late := StubBanSource.new()
@@ -462,7 +462,7 @@ func _test_without_moderation() -> void:
 	print("")
 	_section("[without a moderation store]")
 
-	# The promise of the fallback: with no dot-moderation a gag is still felt, it just does not survive a reconnect.
+	# The promise of the fallback: with no GameSpice Moderation a gag is still felt, it just does not survive a reconnect.
 	# Refusing to act without it would make this addon conditional on another optional one.
 	var session := DotClientSession.new()
 	session.peer_id = 800
@@ -569,7 +569,7 @@ func _test_console() -> void:
 	_done()
 
 
-## A ban source with dot-moderation's shape and none of its identifiers.
+## A ban source with GameSpice Moderation's shape and none of its identifiers.
 class StubBanSource extends RefCounted:
 	var refuse: String = ""
 	var previous_source: Object = null

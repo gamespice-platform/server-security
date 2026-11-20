@@ -50,7 +50,7 @@ func _ready() -> void:
 	server.auto_boot = false
 	add_child(server)
 
-	# The REAL dot-moderation, not a mock: the durable half of every action goes
+	# The REAL GameSpice Moderation, not a mock: the durable half of every action goes
 	# through it, and a suite that stubbed it would be asserting against its own
 	# idea of that addon rather than against the addon.
 	var moderation := DotModerationManager.new()

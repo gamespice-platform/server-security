@@ -3,8 +3,8 @@ class_name DotSecurityWatch
 extends Node
 
 ## Wires the guard to everything on the server worth watching: one node rather than five, every source an optional toggle.
-## Nothing here names dot-chat or dot-auth (optional; a missing class_name fails to parse and the guard would stop existing); they are reached through [DotRegistry] and their signals connected by name.
-## Sources and the events they give: chat (chat.*), connections (connect.*), RCON (rcon.*), the console (command.denied), dot-auth (auth.*).
+## Nothing here names GameSpice Chat or GameSpice Auth (optional; a missing class_name fails to parse and the guard would stop existing); they are reached through [DotRegistry] and their signals connected by name.
+## Sources and the events they give: chat (chat.*), connections (connect.*), RCON (rcon.*), the console (command.denied), GameSpice Auth (auth.*).
 
 const CHANNEL := "security"
 
@@ -15,7 +15,7 @@ const CHANNEL := "security"
 
 @export_group("Sources")
 
-## Watch text chat: the server's own path and dot-chat's router if present.
+## Watch text chat: the server's own path and GameSpice Chat's router if present.
 @export var watch_chat: bool = true
 
 ## Watch connections, rejections and reconnect churn.
@@ -27,7 +27,7 @@ const CHANNEL := "security"
 ## Watch commands refused for want of permission.
 @export var watch_commands: bool = true
 
-## Watch dot-auth, when it is installed.
+## Watch GameSpice Auth, when it is installed.
 @export var watch_auth: bool = true
 
 var guard: DotSecurityManager = null
@@ -109,7 +109,7 @@ func _on_server_message_blocked(session: DotClientSession, reason: String) -> vo
 	)
 
 
-## dot-chat's router, reached by registry name and connected by signal name.
+## GameSpice Chat's router, reached by registry name and connected by signal name.
 func _wire_chat_router() -> void:
 	var router := DotRegistry.get_service(&"dot_chat_router")
 	if router == null or not is_instance_valid(router):
@@ -329,9 +329,9 @@ func _on_rcon_command(address: String, command: String) -> void:
 
 
 
-## Text dot-server uses for a refusal that was about permission.
+## Text GameSpice Server uses for a refusal that was about permission.
 ## A string coupling, the only one available: `command_executed` fires after the permission check, so only `command_refused` sees a denial, told apart by this prefix. It tells probing from mistyping.
-## The self-test asserts the prefix against the real dot-server, since a comment does not fail when the wording changes.
+## The self-test asserts the prefix against the real GameSpice Server, since a comment does not fail when the wording changes.
 const REFUSAL_PERMISSION := "missing permission"
 
 
@@ -386,7 +386,7 @@ func _wire_auth() -> void:
 
 
 func _on_auth_rejected(reason: String, detail: String) -> void:
-	# dot-auth reports why, not who. The address is taken from a session still mid-handshake; when none is, the event is dropped,
+	# GameSpice Auth reports why, not who. The address is taken from a session still mid-handshake; when none is, the event is dropped,
 	# since one attributed to nobody ("somebody, somewhere failed") would ban the next person to connect.
 	for session in server.sessions():
 		if session.state == DotClientSession.State.AUTHENTICATING:

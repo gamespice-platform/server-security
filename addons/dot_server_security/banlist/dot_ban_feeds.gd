@@ -2,13 +2,13 @@
 class_name DotBanFeeds
 extends Node
 
-## Fetches external ban lists, merges them, and refuses the people on them. Registers as [code]dot_ban_source[/code], the seam dot-server already asks on every admission.
-## It chains rather than replaces: dot-moderation registers under the same name, so whichever readies second would silently win. Whatever was registered before is kept and asked too, and both must say "admit".
+## Fetches external ban lists, merges them, and refuses the people on them. Registers as [code]dot_ban_source[/code], the seam GameSpice Server already asks on every admission.
+## It chains rather than replaces: GameSpice Moderation registers under the same name, so whichever readies second would silently win. Whatever was registered before is kept and asked too, and both must say "admit".
 
 const CHANNEL := "security"
 const SERVICE := &"dot_security_bans"
 
-## The seam dot-server asks. dot-moderation publishes the same name.
+## The seam GameSpice Server asks. GameSpice Moderation publishes the same name.
 const BAN_SOURCE := &"dot_ban_source"
 
 ## A fetch finished, for good or ill.
@@ -31,7 +31,7 @@ signal list_changed(total: int)
 @export var fetch_on_ready: bool = true
 
 ## Also consult whatever was registered as `dot_ban_source` before this node.
-## Off means this node replaces dot-moderation's enforcement instead of adding to it, almost never wanted.
+## Off means this node replaces GameSpice Moderation's enforcement instead of adding to it, almost never wanted.
 @export var chain_previous: bool = true
 
 ## Tell an admitted-then-banned player why, using the feed's own reason text.
@@ -80,7 +80,7 @@ func _ready() -> void:
 	DotRegistry.register(SERVICE, self)
 	DotRegistry.register(BAN_SOURCE, self)
 
-	# Kept on top, not put there once: a game's module re-registers dot-moderation on every changelevel
+	# Kept on top, not put there once: a game's module re-registers GameSpice Moderation on every changelevel
 	# and the registry is last-wins, so a chain captured once was displaced and the feeds stopped being asked,
 	# with nothing logged above DEBUG.
 	if chain_previous:
@@ -142,7 +142,7 @@ func _on_service_unregistered(service: StringName) -> void:
 
 
 ## Deferred, because the registration that triggered it is still on the stack, and so
-## that a node registering and chaining in the same frame (dot-server-deploy's party
+## that a node registering and chaining in the same frame (GameSpice Server Deploy's party
 ## bookings do the same dance) has settled before this reads the seam.
 func _rechain() -> void:
 	if not is_inside_tree() or not chain_previous:

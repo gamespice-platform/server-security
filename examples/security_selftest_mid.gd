@@ -400,7 +400,7 @@ func _test_couplings() -> void:
 	print("")
 	_section("[couplings to addons we must not name]")
 
-	# dot-moderation's subject prefixes.
+	# GameSpice Moderation's subject prefixes.
 	_check("the uid prefix matches dot-moderation",
 		DotSecuritySubject.PREFIX_UID == DotPunishmentSubject.PREFIX_UID)
 	_check("the address prefix matches dot-moderation",
@@ -411,7 +411,7 @@ func _test_couplings() -> void:
 		DotSecuritySubject.for_address("1.2.3.4")
 			== DotPunishmentSubject.for_address("1.2.3.4"))
 
-	# dot-moderation's Kind values.
+	# GameSpice Moderation's Kind values.
 	_check("the ban kind matches",
 		DotSecurityAction.MOD_KIND_BAN == DotPunishment.Kind.BAN)
 	_check("the kick kind matches",
@@ -423,7 +423,7 @@ func _test_couplings() -> void:
 	_check("the warn kind matches",
 		DotSecurityAction.MOD_KIND_WARN == DotPunishment.Kind.WARN)
 
-	# dot-server's refusal wording, the only way to tell a permission refusal from a mistyped command.
+	# GameSpice Server's refusal wording, the only way to tell a permission refusal from a mistyped command.
 	# A box rather than a local: lambdas capture locals by VALUE, so assigning to a captured String changes nothing outside.
 	var seen: Array = [""]
 	server.console.command_refused.connect(

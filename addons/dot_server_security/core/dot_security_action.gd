@@ -2,7 +2,7 @@ class_name DotSecurityAction
 extends RefCounted
 
 ## What a rule does when it trips, and the two backends that can do it.
-## Each action has a durable form (a dot-moderation record, surviving reconnect) and a fallback (session flags, gone with the connection); both are supported so this addon does not depend on another optional one. dot-moderation is reached duck-typed via `dot_moderation`, never named, since a missing class_name fails to parse.
+## Each action has a durable form (a GameSpice Moderation record, surviving reconnect) and a fallback (session flags, gone with the connection); both are supported so this addon does not depend on another optional one. GameSpice Moderation is reached duck-typed via `dot_moderation`, never named, since a missing class_name fails to parse.
 
 enum Kind {
 	## Count and remember, do nothing. What a rule is set to while it is being
@@ -22,7 +22,7 @@ enum Kind {
 	BAN = 6,
 }
 
-## dot-moderation's own Kind values, which this addon must not name.
+## GameSpice Moderation's own Kind values, which this addon must not name.
 ## The other half of the coupling described on [DotSecuritySubject], asserted against the real addon in the self-test.
 const MOD_KIND_BAN := 0
 const MOD_KIND_KICK := 1
@@ -119,7 +119,7 @@ static func apply(
 	return durable.wrap("could not apply %s to %s" % [kind_name(kind), subject])
 
 
-## The dot-moderation path: a stored, expiring, revocable record.
+## The GameSpice Moderation path: a stored, expiring, revocable record.
 static func _apply_durable(
 	kind: int,
 	subject: String,
@@ -187,7 +187,7 @@ static func _issue(
 	)
 
 
-## The fallback: dot-server's own session state, which dies with the connection.
+## The fallback: GameSpice Server's own session state, which dies with the connection.
 static func _apply_to_session(
 	kind: int,
 	duration_sec: int,

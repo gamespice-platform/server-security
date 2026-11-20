@@ -1,7 +1,7 @@
 @tool
 extends EditorPlugin
 
-## Editor entry point for dot-server-security. Registers inspector types only.
+## Editor entry point for GameSpice Server Security. Registers inspector types only.
 ## No autoloads: a singleton would rule out a server and a client in one process. The host places the nodes and points them at a server with a [DotNodeRef].
 
 const _ICON := "res://addons/dot_server_security/icon_placeholder.svg"

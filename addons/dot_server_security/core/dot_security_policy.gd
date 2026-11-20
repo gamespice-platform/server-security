@@ -197,7 +197,7 @@ static func _auth_failures() -> DotSecurityRule:
 
 
 ## A password spray against the remote console.
-## The most valuable rule here and the only one whose first step removes: dot-server's lockout is per-process and forgotten on restart; this leaves a record. Nobody mistypes an RCON password five times.
+## The most valuable rule here and the only one whose first step removes: GameSpice Server's lockout is per-process and forgotten on restart; this leaves a record. Nobody mistypes an RCON password five times.
 static func _rcon_bruteforce() -> DotSecurityRule:
 	var rule := DotSecurityRule.of(
 		&"rcon_bruteforce", DotSecurityEvent.RCON_AUTH_FAILED, 5, 300.0

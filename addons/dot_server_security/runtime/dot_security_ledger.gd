@@ -3,7 +3,7 @@ extends RefCounted
 
 ## What the guard did, and why: the answer behind `sec_why <player>` (which rule, event, count, rung, applied or only would-have-been).
 ## An unexplainable automatic punishment gets lifted or refused blindly, and then the guard is turned off.
-## Bounded, oldest-first; a debugging aid, not an audit trail (dot-server's audit log and dot-moderation hold those).
+## Bounded, oldest-first; a debugging aid, not an audit trail (GameSpice Server's audit log and GameSpice Moderation hold those).
 
 ## One decision.
 class Entry extends RefCounted:

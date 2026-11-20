@@ -9,7 +9,7 @@ Every rule starts in dry run. It counts, logs and fills in `sec_status`, and pun
 ## Install
 
 1. Get [Godot 4.7](https://godotengine.org/download).
-2. Either use [dot-bootstrap](https://github.com/gamespice-platform/bootstrap), which clones every project and links the addons, or copy `addons/dot_server_security/`, [dot-core](https://github.com/gamespice-platform/core)'s `addons/dot_core/` and [dot-server](https://github.com/gamespice-platform/server)'s `addons/dot_server/` into your project and enable dot-server-security in *Project > Project Settings > Plugins*.
+2. Either use [GameSpice Bootstrap](https://github.com/gamespice-platform/bootstrap), which clones every project and links the addons, or copy `addons/dot_server_security/`, [GameSpice Core](https://github.com/gamespice-platform/core)'s `addons/dot_core/` and [GameSpice Server](https://github.com/gamespice-platform/server)'s `addons/dot_server/` into your project and enable dot-server-security in *Project > Project Settings > Plugins*.
 
 ```gdscript
 var guard := DotSecurityManager.new()
@@ -19,7 +19,7 @@ var watch := DotSecurityWatch.new()      # wires it to everything worth watching
 server.add_child(watch)
 ```
 
-[dot-moderation](https://github.com/gamespice-platform/moderation), [dot-chat](https://github.com/gamespice-platform/chat) and [dot-auth](https://github.com/gamespice-platform/auth) are optional and found at runtime.
+[GameSpice Moderation](https://github.com/gamespice-platform/moderation), [GameSpice Chat](https://github.com/gamespice-platform/chat) and [GameSpice Auth](https://github.com/gamespice-platform/auth) are optional and found at runtime.
 
 ## Rules
 
@@ -54,9 +54,9 @@ Six messages in ten seconds: a warning, then five minutes, then half an hour, th
 
 | Events | Source |
 | --- | --- |
-| `chat.message`, `chat.duplicate`, `chat.caps`, `chat.link`, `chat.refused`, `chat.command` | Text chat, from the server's own path and dot-chat |
+| `chat.message`, `chat.duplicate`, `chat.caps`, `chat.link`, `chat.refused`, `chat.command` | Text chat, from the server's own path and GameSpice Chat |
 | `connect.attempt`, `connect.rejected`, `connect.churn` | Connections, including reconnect loops |
-| `auth.failed`, `auth.rejected` | Authentication, with dot-auth |
+| `auth.failed`, `auth.rejected` | Authentication, with GameSpice Auth |
 | `rcon.auth_failed`, `rcon.command` | Remote console |
 | `command.denied` | Probing for commands somebody does not hold |
 | `cheat.*` | The anti-cheat detectors |
@@ -106,11 +106,11 @@ Any number of endpoints, merged, cached and consulted on every join.
 | Cache | Written to disk, so a restart during an outage still enforces. |
 | `on_failure` | `keep_last` (default), `ignore` or `refuse_all` |
 
-Tokens come from a file (`token_file`), never the environment or command line. dot-moderation registers under the same `dot_ban_source` name, so both are asked and both must say yes.
+Tokens come from a file (`token_file`), never the environment or command line. GameSpice Moderation registers under the same `dot_ban_source` name, so both are asked and both must say yes.
 
 ## With and without Moderation
 
-With dot-moderation a gag is a stored, expiring, revocable record that survives a reconnect and restart. Without it, a gag is two flags on the session and is lost when the player reconnects. Both work.
+With GameSpice Moderation a gag is a stored, expiring, revocable record that survives a reconnect and restart. Without it, a gag is two flags on the session and is lost when the player reconnects. Both work.
 
 ## Commands
 

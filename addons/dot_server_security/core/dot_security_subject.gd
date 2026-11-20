@@ -3,7 +3,7 @@ extends RefCounted
 
 ## Who a counter counts against. A peer id dies with the socket, so counting per connection is dodged by reconnecting; the scope is what survives (docs/rationale.md).
 ## UID follows an account across addresses (chat, commands, votes); ADDRESS covers what happens before an identity exists (connection floods, wrong RCON passwords); BOTH counts each event in both scopes, at double the counters.
-## The prefixes mirror dot-moderation's, which this addon must not name; the self-test asserts they agree with the real addon, since a comment does not fail.
+## The prefixes mirror GameSpice Moderation's, which this addon must not name; the self-test asserts they agree with the real addon, since a comment does not fail.
 
 enum Scope {
 	## The account behind the event. Survives a reconnect.

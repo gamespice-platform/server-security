@@ -1,14 +1,14 @@
 # External ban lists
 
-`DotBanFeeds` registers as `dot_ban_source`, the seam dot-server already asks on every admission, so nothing in dot-server changes.
+`DotBanFeeds` registers as `dot_ban_source`, the seam GameSpice Server already asks on every admission, so nothing in GameSpice Server changes.
 
 ## It chains, and stays on top
 
 **It chains rather than replaces, and that is the bug it exists to avoid.** dot-moderation registers under the same name; whichever readied second would silently win, leaving a deployment with both installed enforcing exactly one.
 
 - Whatever held the name is captured **before** registering. Capture after and the node finds itself and recurses until the stack gives out. Both must say yes.
-- **It is kept on top, not put there once.** A game's module registers dot-moderation under the same name on every changelevel, and the registry is last-wins, so a chain captured only at `_ready` is displaced by the first level change and the feeds are never asked again. `DotBanFeeds` listens to `DotRegistry.signals()` and, deferred, chains onto whoever arrived and registers itself again.
-- **Unless the newcomer's own `previous_source` chain already reaches the feeds** (dot-server-deploy's party bookings do the same dance), because going on top of that would make the chain a loop.
+- **It is kept on top, not put there once.** A game's module registers GameSpice Moderation under the same name on every changelevel, and the registry is last-wins, so a chain captured only at `_ready` is displaced by the first level change and the feeds are never asked again. `DotBanFeeds` listens to `DotRegistry.signals()` and, deferred, chains onto whoever arrived and registers itself again.
+- **Unless the newcomer's own `previous_source` chain already reaches the feeds** (GameSpice Server Deploy's party bookings do the same dance), because going on top of that would make the chain a loop.
 
 ## Decisions worth not undoing
 

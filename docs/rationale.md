@@ -16,7 +16,7 @@ An anti-cheat detail can contain what the client said (its build string, a weapo
 
 ## The moderation store is looked up again, not latched
 
-A `DotSecurityManager` placed beside a server attaches as the server boots, but dot-moderation's manager is built by the game in a module loaded afterwards, so the registry lookup at attach is null on every server that has a store. Latching that answer made every gag, mute and ban fall back to the session, which dies with the connection: nothing errored, because a server with no store is a supported configuration. The lookup is repeated until found and dropped when a game change frees the store.
+A `DotSecurityManager` placed beside a server attaches as the server boots, but GameSpice Moderation's manager is built by the game in a module loaded afterwards, so the registry lookup at attach is null on every server that has a store. Latching that answer made every gag, mute and ban fall back to the session, which dies with the connection: nothing errored, because a server with no store is a supported configuration. The lookup is repeated until found and dropped when a game change frees the store.
 
 ## Console registration waits for the console
 
@@ -24,8 +24,8 @@ A guard in a scene beside a server is ready before the server boots, and the con
 
 ## Permission refusals are recognised by a string prefix
 
-`command_executed` fires only after the permission check passed, so it never sees a denial; `command_refused` sees every refusal and distinguishes permission by a text prefix alone. That is the only way to tell probing from mistyping, and the self-test asserts the prefix against the real dot-server because a comment does not fail when the wording changes.
+`command_executed` fires only after the permission check passed, so it never sees a denial; `command_refused` sees every refusal and distinguishes permission by a text prefix alone. That is the only way to tell probing from mistyping, and the self-test asserts the prefix against the real GameSpice Server because a comment does not fail when the wording changes.
 
 ## An auth failure with no address is dropped
 
-dot-auth reports why, not who. A failure that cannot be attributed to a session still mid-handshake is dropped rather than attributed to nobody: a rule counting "somebody, somewhere failed" would ban the next person to connect.
+GameSpice Auth reports why, not who. A failure that cannot be attributed to a session still mid-handshake is dropped rather than attributed to nobody: a rule counting "somebody, somewhere failed" would ban the next person to connect.
