@@ -1,4 +1,4 @@
-[![Server Security - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/254-dot-server-security)
+[![Server Security - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/58-gs-server-security)
 
 Watches what happens on a dedicated server, counts it against rules an operator writes, and escalates (warn, gag, mute, kick, ban) without anybody having to be awake. It also checks join attempts against external ban lists and has server-side anti-cheat checks.
 
