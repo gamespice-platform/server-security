@@ -1,9 +1,9 @@
 @tool
-class_name DotBanFeed
+class_name GSBanFeed
 extends Resource
 
 ## One external list of people who may not play here: where it is, how to authenticate, how to find the identifiers in the response, and what to do when it is down.
-## Several feeds are the normal case (different owners, trust and refresh rates); [DotBanFeeds] holds any number.
+## Several feeds are the normal case (different owners, trust and refresh rates); [GSBanFeeds] holds any number.
 
 enum Auth {
 	## A public list. No credential is sent.
@@ -119,8 +119,8 @@ enum OnFailure {
 @export_range(0, 268435456, 1024) var max_bytes: int = 16777216
 
 
-static func of(p_id: StringName, p_url: String) -> DotBanFeed:
-	var feed := DotBanFeed.new()
+static func of(p_id: StringName, p_url: String) -> GSBanFeed:
+	var feed := GSBanFeed.new()
 	feed.id = p_id
 	feed.url = p_url
 	feed.cache_path = "user://cache/banfeed_%s.json" % p_id
@@ -177,13 +177,13 @@ func headers() -> Dictionary:
 		Auth.HMAC:
 			if credential != "":
 				var ts := int(Time.get_unix_time_from_system())
-				var nonce := DotHash.random_hex(8)
+				var nonce := GSHash.random_hex(8)
 				# Signed over timestamp, nonce and the path, so a signature
 				# captured from one request cannot be replayed against another.
 				var payload := "%d.%s.%s" % [ts, nonce, url]
 				out["X-Dot-Timestamp"] = str(ts)
 				out["X-Dot-Nonce"] = nonce
-				out["X-Dot-Signature"] = DotHash.hmac_sha256_hex(
+				out["X-Dot-Signature"] = GSHash.hmac_sha256_hex(
 					credential, payload
 				)
 
@@ -191,18 +191,18 @@ func headers() -> Dictionary:
 
 
 
-func validate() -> DotResult:
+func validate() -> GSResult:
 	if String(id).strip_edges() == "":
-		return DotResult.fail(DotError.CODE_INVALID, "A ban feed needs an id.")
+		return GSResult.fail(GSError.CODE_INVALID, "A ban feed needs an id.")
 
 	if url.strip_edges() == "":
-		return DotResult.fail(
-			DotError.CODE_INVALID, "Feed '%s' has no url." % id
+		return GSResult.fail(
+			GSError.CODE_INVALID, "Feed '%s' has no url." % id
 		)
 
 	if url.begins_with("http://") and not allow_insecure:
-		return DotResult.fail(
-			DotError.CODE_INVALID,
+		return GSResult.fail(
+			GSError.CODE_INVALID,
 			"Feed '%s' is plain HTTP." % id,
 			"a ban list over HTTP is one anybody on the path can rewrite, and "
 			+ "the interesting rewrite is the empty one; set allow_insecure "
@@ -210,20 +210,20 @@ func validate() -> DotResult:
 		)
 
 	if not url.begins_with("http://") and not url.begins_with("https://"):
-		return DotResult.fail(
-			DotError.CODE_INVALID, "Feed '%s' has no scheme." % id
+		return GSResult.fail(
+			GSError.CODE_INVALID, "Feed '%s' has no scheme." % id
 		)
 
 	if auth != Auth.NONE and effective_token() == "":
 		# Named at boot rather than left to fail on the first fetch, which on a
 		# five-minute refresh is five minutes of an unguarded server.
-		return DotResult.fail(
-			DotError.CODE_AUTH,
+		return GSResult.fail(
+			GSError.CODE_AUTH,
 			"Feed '%s' needs a credential and has none." % id,
 			"set token_file"
 		)
 
-	return DotResult.success(self)
+	return GSResult.success(self)
 
 
 static func sensitive_keys() -> PackedStringArray:
@@ -266,8 +266,8 @@ static func parse_failure(text: String) -> int:
 	return -1
 
 
-static func from_dictionary(raw: Dictionary) -> DotResult:
-	var feed := DotBanFeed.new()
+static func from_dictionary(raw: Dictionary) -> GSResult:
+	var feed := GSBanFeed.new()
 
 	feed.id = StringName(str(raw.get("id", "")))
 	feed.url = str(raw.get("url", ""))
@@ -292,8 +292,8 @@ static func from_dictionary(raw: Dictionary) -> DotResult:
 	if raw.has("auth"):
 		var mode := parse_auth(str(raw["auth"]))
 		if mode < 0:
-			return DotResult.fail(
-				DotError.CODE_INVALID,
+			return GSResult.fail(
+				GSError.CODE_INVALID,
 				"'%s' is not an auth mode." % str(raw["auth"]),
 				"try none, bearer, basic, header, query or hmac"
 			)
@@ -302,8 +302,8 @@ static func from_dictionary(raw: Dictionary) -> DotResult:
 	if raw.has("on_failure"):
 		var mode2 := parse_failure(str(raw["on_failure"]))
 		if mode2 < 0:
-			return DotResult.fail(
-				DotError.CODE_INVALID,
+			return GSResult.fail(
+				GSError.CODE_INVALID,
 				"'%s' is not a failure policy." % str(raw["on_failure"]),
 				"try keep_last, ignore or refuse_all"
 			)

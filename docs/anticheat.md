@@ -1,6 +1,6 @@
 # Anti-cheat: the line down the middle
 
-`DotAntiCheatEvent` splits its vocabulary in two and **nothing else in this addon matters as much**:
+`GSAntiCheatEvent` splits its vocabulary in two and **nothing else in this addon matters as much**:
 
 **Impossible** (`cheat.speed`, `teleport`, `fly`, `timing`, `fire_rate`, `reach`, `integrity`, `command_sequence`): the server did the arithmetic and the client's claim does not fit. Facts, not opinions. A rule may act on one.
 
@@ -8,7 +8,7 @@
 
 ## Behavioural rules cannot punish on one detection
 
-`DotAntiCheat._audit_rules()` **disables at boot** any enabled rule that would punish on a single behavioural detection, and says why. That is not paternalism: aim analysis cannot distinguish a cheat from a good day, so such a rule will eventually ban somebody who did nothing, and a community remembers that far longer than it remembers a cheat. Every shipped behavioural rule warns and stops; the ladder does not continue, because a ladder is exactly how a behavioural signal turns into a wrongful ban. The suite asserts that of the whole shipped set.
+`GSAntiCheat._audit_rules()` **disables at boot** any enabled rule that would punish on a single behavioural detection, and says why. That is not paternalism: aim analysis cannot distinguish a cheat from a good day, so such a rule will eventually ban somebody who did nothing, and a community remembers that far longer than it remembers a cheat. Every shipped behavioural rule warns and stops; the ladder does not continue, because a ladder is exactly how a behavioural signal turns into a wrongful ban. The suite asserts that of the whole shipped set.
 
 ## Re-simulation is the check that cannot be bypassed
 

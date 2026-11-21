@@ -1,6 +1,6 @@
 @tool
-class_name DotAntiCheatConfig
-extends DotSecurityConfigBase
+class_name GSAntiCheatConfig
+extends GSSecurityConfigBase
 
 ## Every threshold the detectors use, and the two that are not thresholds.
 ## No default is right for every game (a surf server's speed is a lobby's speed hack); narrow them against `sec_ac_status`, which reports the largest value each detector has seen.
@@ -10,7 +10,7 @@ extends DotSecurityConfigBase
 ## The detectors. Off costs nothing.
 @export var enabled: bool = true
 
-## Report only, never act — the same promise [member DotSecurityConfig.dry_run]
+## Report only, never act — the same promise [member GSSecurityConfig.dry_run]
 ## makes, held separately because an operator commonly trusts chat rules long
 ## before they trust a movement threshold they have not tuned.
 @export var dry_run: bool = true
@@ -38,7 +38,7 @@ extends DotSecurityConfigBase
 @export_range(0.0, 600.0, 0.5) var max_airborne_sec: float = 0.0
 
 ## Fraction of the predicted position a re-simulation may differ by.
-## Only used with a reference simulator ([member DotAntiCheatDetectors.movement_reference]), the check that cannot be bypassed; the envelope settings are the fallback.
+## Only used with a reference simulator ([member GSAntiCheatDetectors.movement_reference]), the check that cannot be bypassed; the envelope settings are the fallback.
 @export_range(0.0, 100.0, 0.01) var reference_tolerance_m: float = 0.25
 
 @export_group("Timing")
@@ -124,18 +124,18 @@ func cfg_keys() -> Dictionary:
 	return CFG_KEYS
 
 
-func validate() -> DotResult:
+func validate() -> GSResult:
 	if max_time_ratio < 1.0:
-		return DotResult.fail(
-			DotError.CODE_INVALID,
+		return GSResult.fail(
+			GSError.CODE_INVALID,
 			"max_time_ratio below 1 would flag every client.",
 			"1.0 is exactly wall-clock; 1.05 is the usual allowance"
 		)
 
 	if fire_interval_tolerance <= 0.0 or fire_interval_tolerance > 1.0:
-		return DotResult.fail(
-			DotError.CODE_INVALID,
+		return GSResult.fail(
+			GSError.CODE_INVALID,
 			"fire_interval_tolerance must be between 0 and 1."
 		)
 
-	return DotResult.success(self)
+	return GSResult.success(self)

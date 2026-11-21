@@ -12,23 +12,23 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 | --- | --- |
 | [docs/README.md](docs/README.md) | the index |
 | [docs/rules.md](docs/rules.md) | the manager, rules, windows, actions, the watch, the console, anything touching GameSpice Moderation |
-| [docs/anticheat.md](docs/anticheat.md) | `DotAntiCheat`, `DotAntiCheatEvent`, `DotAntiCheatConfig` |
-| [docs/ban-feeds.md](docs/ban-feeds.md) | `DotBanFeed`, `DotBanIndex`, `DotBanFeeds` |
+| [docs/anticheat.md](docs/anticheat.md) | `GSAntiCheat`, `GSAntiCheatEvent`, `GSAntiCheatConfig` |
+| [docs/ban-feeds.md](docs/ban-feeds.md) | `GSBanFeed`, `GSBanIndex`, `GSBanFeeds` |
 | [docs/history.md](docs/history.md) | the bugs, and how each looked |
 
 ## Layout
 
 | Path | What |
 | --- | --- |
-| `addons/dot_server_security/core/` | `DotSecurityEvent` (an open vocabulary), `DotSecuritySubject` (uid / address / both), `DotSecurityAction` (and its two backends), `DotSecurityStep`, `DotSecurityRule` and its JSON form, `DotSecurityPolicy` (the shipped set, and layering a file over it), `DotSecurityWindow`, `DotSecurityConfig` |
-| `addons/dot_server_security/runtime/` | `DotSecurityManager` (counts, decides, acts; registered as `dot_security`), `DotSecurityLedger` (what `sec_why` answers from) |
-| `addons/dot_server_security/watch/` | `DotSecurityWatch`: wires chat, connections, RCON, commands and auth |
-| `addons/dot_server_security/anticheat/` | `DotAntiCheatEvent` (the impossible/suspicious split), `DotAntiCheatConfig`, `DotAntiCheat` |
-| `addons/dot_server_security/banlist/` | `DotBanFeed` (one endpoint), `DotBanIndex` (the merged list), `DotBanFeeds` (fetch, merge, cache, chain) |
-| `addons/dot_server_security/console/` | `DotSecurityCommands`: the operator's whole view; `sec_why` is the one |
+| `addons/dot_server_security/core/` | `GSSecurityEvent` (an open vocabulary), `GSSecuritySubject` (uid / address / both), `GSSecurityAction` (and its two backends), `GSSecurityStep`, `GSSecurityRule` and its JSON form, `GSSecurityPolicy` (the shipped set, and layering a file over it), `GSSecurityWindow`, `GSSecurityConfig` |
+| `addons/dot_server_security/runtime/` | `GSSecurityManager` (counts, decides, acts; registered as `dot_security`), `GSSecurityLedger` (what `sec_why` answers from) |
+| `addons/dot_server_security/watch/` | `GSSecurityWatch`: wires chat, connections, RCON, commands and auth |
+| `addons/dot_server_security/anticheat/` | `GSAntiCheatEvent` (the impossible/suspicious split), `GSAntiCheatConfig`, `GSAntiCheat` |
+| `addons/dot_server_security/banlist/` | `GSBanFeed` (one endpoint), `GSBanIndex` (the merged list), `GSBanFeeds` (fetch, merge, cache, chain) |
+| `addons/dot_server_security/console/` | `GSSecurityCommands`: the operator's whole view; `sec_why` is the one |
 | `addons/dot_server_security/cfg/` | `security_rules.example.json`, `ban_feeds.example.json` |
 | `examples/security_selftest.tscn` | the suite, against the real GameSpice Moderation |
-| `examples/cfg_selftest.tscn` | `security.yml` through `DotSecurityConfig.load_cfg` and `DotAntiCheatConfig.load_cfg`: `cfg/addons/dot_server_security/`, `cfg/server/addons/dot_server_security/` over it, the flat `cfg/security.yml` shim (WARN once, removed 2026-12-31) |
+| `examples/cfg_selftest.tscn` | `security.yml` through `GSSecurityConfig.load_cfg` and `GSAntiCheatConfig.load_cfg`: `cfg/addons/dot_server_security/`, `cfg/server/addons/dot_server_security/` over it, the flat `cfg/security.yml` shim (WARN once, removed 2026-12-31) |
 
 ## Running and testing
 
@@ -40,7 +40,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 
 **The engine**
 
-- One engine: anti-cheat detections and game events are `DotSecurityEvent`s like any other; never build a second counter. [rules](docs/rules.md#one-engine-and-everything-is-an-event)
+- One engine: anti-cheat detections and game events are `GSSecurityEvent`s like any other; never build a second counter. [rules](docs/rules.md#one-engine-and-everything-is-an-event)
 - `dry_run` defaults to true, anti-cheat has its own, and shipped thresholds stay timid. [rules](docs/rules.md#it-ships-in-dry-run-and-that-is-a-decision)
 - `cooldown_sec` is what stops a warning walking its ladder in a second; `offence_memory_sec` is not `window_sec`; `scope` decides if a count survives a reconnect; the ladder repeats its last rung; exemption is checked at the action, not the count. [rules](docs/rules.md#the-five-settings-that-are-not-obvious)
 - Windows slide, never reset on a boundary, and every structure in them is capped oldest-first. [rules](docs/rules.md#why-the-sliding-window-is-sliding)
@@ -61,7 +61,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 
 **Ban feeds**
 
-- `DotBanFeeds` chains into `dot_ban_source` (capture before registering), re-chains on every registry change, and stops when the newcomer's `previous_source` chain already reaches it. [ban-feeds](docs/ban-feeds.md#it-chains-and-stays-on-top)
+- `GSBanFeeds` chains into `dot_ban_source` (capture before registering), re-chains on every registry change, and stops when the newcomer's `previous_source` chain already reaches it. [ban-feeds](docs/ban-feeds.md#it-chains-and-stays-on-top)
 - Plain HTTP refused without `allow_insecure`; missing credentials refused at boot; one bad feed skipped; disk cache loaded stale; expired entries dropped at parse; CIDR matched, not expanded; credentials from `token_file`. [ban-feeds](docs/ban-feeds.md#decisions-worth-not-undoing)
 
 Deliberately not here: a client-side component, machine learning over aim traces (`observe_aim`/`observe_trigger` are the hooks), wallhack detection, its own ban storage, rate limiting game traffic. [rules](docs/rules.md#deliberately-not-here)

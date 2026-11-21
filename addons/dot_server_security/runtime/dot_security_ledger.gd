@@ -1,4 +1,4 @@
-class_name DotSecurityLedger
+class_name GSSecurityLedger
 extends RefCounted
 
 ## What the guard did, and why: the answer behind `sec_why <player>` (which rule, event, count, rung, applied or only would-have-been).
@@ -15,7 +15,7 @@ class Entry extends RefCounted:
 	var threshold: int = 0
 	var window_sec: float = 0.0
 	var offence: int = 0
-	var action: int = DotSecurityAction.Kind.NONE
+	var action: int = GSSecurityAction.Kind.NONE
 	var duration_sec: int = 0
 	## False when dry_run or an exemption meant nothing was actually done.
 	var applied: bool = false
@@ -25,16 +25,16 @@ class Entry extends RefCounted:
 
 	func describe() -> String:
 		var when := Time.get_datetime_string_from_unix_time(at, true)
-		var what := DotSecurityAction.kind_name(action)
+		var what := GSSecurityAction.kind_name(action)
 
-		if DotSecurityAction.takes_duration(action) and duration_sec > 0:
-			what += " " + DotSecurityAction.format_duration(duration_sec)
+		if GSSecurityAction.takes_duration(action) and duration_sec > 0:
+			what += " " + GSSecurityAction.format_duration(duration_sec)
 
 		var verb := what if applied else "WOULD %s" % what
 		var why := "" if withheld == "" else "  (%s)" % withheld
 
 		return "%s  %-18s %-16s offence %d: %.0f x %s in %.0fs -> %s%s" % [
-			when, rule_id, DotSecuritySubject.describe(subject),
+			when, rule_id, GSSecuritySubject.describe(subject),
 			offence, count, event, window_sec, verb, why
 		]
 
@@ -48,7 +48,7 @@ class Entry extends RefCounted:
 			"threshold": threshold,
 			"window_sec": window_sec,
 			"offence": offence,
-			"action": DotSecurityAction.kind_name(action),
+			"action": GSSecurityAction.kind_name(action),
 			"duration_sec": duration_sec,
 			"applied": applied,
 			"withheld": withheld,

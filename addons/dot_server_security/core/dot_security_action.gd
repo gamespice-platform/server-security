@@ -1,4 +1,4 @@
-class_name DotSecurityAction
+class_name GSSecurityAction
 extends RefCounted
 
 ## What a rule does when it trips, and the two backends that can do it.
@@ -23,7 +23,7 @@ enum Kind {
 }
 
 ## GameSpice Moderation's own Kind values, which this addon must not name.
-## The other half of the coupling described on [DotSecuritySubject], asserted against the real addon in the self-test.
+## The other half of the coupling described on [GSSecuritySubject], asserted against the real addon in the self-test.
 const MOD_KIND_BAN := 0
 const MOD_KIND_KICK := 1
 const MOD_KIND_VOICE_MUTE := 2
@@ -89,16 +89,16 @@ static func apply(
 	reason: String,
 	issuer: String,
 	moderation: Object,
-	server: DotServer,
-	session: DotClientSession
-) -> DotResult:
+	server: GSServer,
+	session: GSClientSession
+) -> GSResult:
 	if kind == Kind.NONE:
-		return DotResult.success("counted")
+		return GSResult.success("counted")
 
-	if not DotSecuritySubject.may_act_on(subject):
+	if not GSSecuritySubject.may_act_on(subject):
 		# Not an error. A rule that keeps tripping against loopback in a headless
 		# test is working correctly and must not fill the log with failures.
-		return DotResult.success("exempt subject")
+		return GSResult.success("exempt subject")
 
 	var durable := _apply_durable(
 		kind, subject, duration_sec, reason, issuer, moderation
@@ -109,12 +109,12 @@ static func apply(
 	var immediate := _apply_to_session(kind, duration_sec, reason, server, session)
 
 	if durable.ok:
-		return DotResult.success(
+		return GSResult.success(
 			"%s (recorded%s)" % [kind_name(kind), "" if immediate.ok else ", session miss"]
 		)
 
 	if immediate.ok:
-		return DotResult.success("%s (session only)" % kind_name(kind))
+		return GSResult.success("%s (session only)" % kind_name(kind))
 
 	return durable.wrap("could not apply %s to %s" % [kind_name(kind), subject])
 
@@ -127,23 +127,23 @@ static func _apply_durable(
 	reason: String,
 	issuer: String,
 	moderation: Object
-) -> DotResult:
+) -> GSResult:
 	if moderation == null or not is_instance_valid(moderation):
-		return DotResult.fail(
-			DotError.CODE_UNSUPPORTED, "No moderation store is installed."
+		return GSResult.fail(
+			GSError.CODE_UNSUPPORTED, "No moderation store is installed."
 		)
 
 	if not moderation.has_method("issue"):
-		return DotResult.fail(
-			DotError.CODE_INVALID,
+		return GSResult.fail(
+			GSError.CODE_INVALID,
 			"What is registered as the moderation store cannot issue punishments.",
 			"got a %s" % moderation.get_class()
 		)
 
 	var mod_kind := _to_mod_kind(kind)
 	if mod_kind < 0:
-		return DotResult.fail(
-			DotError.CODE_UNSUPPORTED,
+		return GSResult.fail(
+			GSError.CODE_UNSUPPORTED,
 			"%s has no durable form." % kind_name(kind)
 		)
 
@@ -171,7 +171,7 @@ static func _issue(
 	duration_sec: int,
 	reason: String,
 	issuer: String
-) -> DotResult:
+) -> GSResult:
 	# issuer_immunity is deliberately the maximum: the guard is not a ranked moderator, and declining to act on a higher
 	# rank would silently protect the people best placed to abuse the server. Exemptions are decided in one place,
 	# the rule's own.
@@ -179,11 +179,11 @@ static func _issue(
 		"issue", mod_kind, subject, reason, issuer, duration_sec, 0x7FFFFFFF
 	)
 
-	if issued is DotResult:
-		return issued as DotResult
+	if issued is GSResult:
+		return issued as GSResult
 
-	return DotResult.fail(
-		DotError.CODE_INVALID, "The moderation store answered with something else."
+	return GSResult.fail(
+		GSError.CODE_INVALID, "The moderation store answered with something else."
 	)
 
 
@@ -192,34 +192,34 @@ static func _apply_to_session(
 	kind: int,
 	duration_sec: int,
 	reason: String,
-	server: DotServer,
-	session: DotClientSession
-) -> DotResult:
+	server: GSServer,
+	session: GSClientSession
+) -> GSResult:
 	if session == null or not is_instance_valid(session):
-		return DotResult.fail(DotError.CODE_STATE, "No live session.")
+		return GSResult.fail(GSError.CODE_STATE, "No live session.")
 
 	match kind:
 		Kind.WARN:
-			return DotResult.success("warned")
+			return GSResult.success("warned")
 
 		Kind.GAG:
 			session.silence(session.muted, true, duration_sec)
-			return DotResult.success("gagged")
+			return GSResult.success("gagged")
 
 		Kind.VOICE_MUTE:
 			session.silence(true, session.gagged, duration_sec)
-			return DotResult.success("voice muted")
+			return GSResult.success("voice muted")
 
 		Kind.SILENCE:
 			session.silence(true, true, duration_sec)
-			return DotResult.success("silenced")
+			return GSResult.success("silenced")
 
 		Kind.KICK, Kind.BAN:
 			if server == null:
-				return DotResult.fail(DotError.CODE_STATE, "No server to kick from.")
+				return GSResult.fail(GSError.CODE_STATE, "No server to kick from.")
 			return server.kick(session, reason)
 
-	return DotResult.fail(DotError.CODE_INVALID, "Unknown action.")
+	return GSResult.fail(GSError.CODE_INVALID, "Unknown action.")
 
 
 static func _to_mod_kind(kind: int) -> int:

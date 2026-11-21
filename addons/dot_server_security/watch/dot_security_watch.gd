@@ -1,17 +1,17 @@
 @tool
-class_name DotSecurityWatch
+class_name GSSecurityWatch
 extends Node
 
 ## Wires the guard to everything on the server worth watching: one node rather than five, every source an optional toggle.
-## Nothing here names GameSpice Chat or GameSpice Auth (optional; a missing class_name fails to parse and the guard would stop existing); they are reached through [DotRegistry] and their signals connected by name.
+## Nothing here names GameSpice Chat or GameSpice Auth (optional; a missing class_name fails to parse and the guard would stop existing); they are reached through [GSRegistry] and their signals connected by name.
 ## Sources and the events they give: chat (chat.*), connections (connect.*), RCON (rcon.*), the console (command.denied), GameSpice Auth (auth.*).
 
 const CHANNEL := "security"
 
 @export_group("Wiring")
 
-## The guard to report to. Defaults to whichever one is in [DotRegistry].
-@export var guard_ref: DotNodeRef = null
+## The guard to report to. Defaults to whichever one is in [GSRegistry].
+@export var guard_ref: GSNodeRef = null
 
 @export_group("Sources")
 
@@ -30,8 +30,8 @@ const CHANNEL := "security"
 ## Watch GameSpice Auth, when it is installed.
 @export var watch_auth: bool = true
 
-var guard: DotSecurityManager = null
-var server: DotServer = null
+var guard: GSSecurityManager = null
+var server: GSServer = null
 
 ## subject -> Array of [text, unix_time], for the duplicate check.
 var _recent_text: Dictionary = {}
@@ -47,28 +47,28 @@ func _ready() -> void:
 		return
 
 	if guard_ref == null:
-		guard_ref = DotNodeRef.of_service(DotSecurityManager.SERVICE)
+		guard_ref = GSNodeRef.of_service(GSSecurityManager.SERVICE)
 
-	if guard_ref.mode == DotNodeRef.Mode.REGISTRY \
-			and DotRegistry.get_service(guard_ref.service) == null:
-		var waited := await DotRegistry.await_service(guard_ref.service, 10.0)
+	if guard_ref.mode == GSNodeRef.Mode.REGISTRY \
+			and GSRegistry.get_service(guard_ref.service) == null:
+		var waited := await GSRegistry.await_service(guard_ref.service, 10.0)
 		if not waited.ok:
-			DotLog.warn(CHANNEL, "no security manager to report to")
+			GSLog.warn(CHANNEL, "no security manager to report to")
 			return
 
-	guard = guard_ref.resolve_or_null(self, CHANNEL) as DotSecurityManager
+	guard = guard_ref.resolve_or_null(self, CHANNEL) as GSSecurityManager
 	if guard == null:
-		DotLog.warn(CHANNEL, "guard_ref did not resolve to a DotSecurityManager")
+		GSLog.warn(CHANNEL, "guard_ref did not resolve to a GSSecurityManager")
 		return
 
 	server = guard.server
 	if server == null:
-		DotLog.warn(CHANNEL, "the guard is not attached to a server yet")
+		GSLog.warn(CHANNEL, "the guard is not attached to a server yet")
 		return
 
 	_wire()
 
-	DotLog.info(
+	GSLog.info(
 		CHANNEL, "watching", {"sources": ", ".join(Array(_wired))}
 	)
 
@@ -98,20 +98,20 @@ func _wire_server_chat() -> void:
 
 
 func _on_server_message(
-	session: DotClientSession, text: String, _team_only: bool
+	session: GSClientSession, text: String, _team_only: bool
 ) -> void:
 	_examine_message(session, text)
 
 
-func _on_server_message_blocked(session: DotClientSession, reason: String) -> void:
+func _on_server_message_blocked(session: GSClientSession, reason: String) -> void:
 	guard.report_session(
-		DotSecurityEvent.CHAT_REFUSED, session, 1.0, {"reason": reason}
+		GSSecurityEvent.CHAT_REFUSED, session, 1.0, {"reason": reason}
 	)
 
 
 ## GameSpice Chat's router, reached by registry name and connected by signal name.
 func _wire_chat_router() -> void:
-	var router := DotRegistry.get_service(&"dot_chat_router")
+	var router := GSRegistry.get_service(&"dot_chat_router")
 	if router == null or not is_instance_valid(router):
 		return
 
@@ -136,7 +136,7 @@ func _on_router_message(message: Object, _recipients: PackedInt32Array) -> void:
 
 func _on_router_refused(peer: int, code: String, _reason: String) -> void:
 	guard.report_session(
-		DotSecurityEvent.CHAT_REFUSED, _session_for(peer), 1.0, {"code": code}
+		GSSecurityEvent.CHAT_REFUSED, _session_for(peer), 1.0, {"code": code}
 	)
 
 
@@ -144,36 +144,36 @@ func _on_router_command(
 	peer: int, command: String, _args: PackedStringArray, _raw: String
 ) -> void:
 	guard.report_session(
-		DotSecurityEvent.CHAT_COMMAND, _session_for(peer), 1.0,
+		GSSecurityEvent.CHAT_COMMAND, _session_for(peer), 1.0,
 		{"command": command}
 	)
 
 
 ## Turns one message into every chat event it is an instance of.
 ## A shouted, repeated link is three events, counted separately because an operator may care about one; reporting only the worst would stop the other rules firing.
-func _examine_message(session: DotClientSession, text: String) -> void:
+func _examine_message(session: GSClientSession, text: String) -> void:
 	if session == null:
 		return
 
-	guard.report_session(DotSecurityEvent.CHAT_MESSAGE, session, 1.0)
+	guard.report_session(GSSecurityEvent.CHAT_MESSAGE, session, 1.0)
 
 	var config := guard.config
-	var subject := DotSecuritySubject.of_session(
-		session, DotSecuritySubject.Scope.UID
+	var subject := GSSecuritySubject.of_session(
+		session, GSSecuritySubject.Scope.UID
 	)
 
 	if _is_duplicate(subject, text, config):
-		guard.report_session(DotSecurityEvent.CHAT_DUPLICATE, session)
+		guard.report_session(GSSecurityEvent.CHAT_DUPLICATE, session)
 
 	if _is_shouting(text, config):
-		guard.report_session(DotSecurityEvent.CHAT_CAPS, session)
+		guard.report_session(GSSecurityEvent.CHAT_CAPS, session)
 
 	if _has_link(text, config):
-		guard.report_session(DotSecurityEvent.CHAT_LINK, session)
+		guard.report_session(GSSecurityEvent.CHAT_LINK, session)
 
 
 func _is_duplicate(
-	subject: String, text: String, config: DotSecurityConfig
+	subject: String, text: String, config: GSSecurityConfig
 ) -> bool:
 	var now := int(Time.get_unix_time_from_system())
 	var needle := _normalise(text, config)
@@ -199,7 +199,7 @@ func _is_duplicate(
 	return found
 
 
-func _normalise(text: String, config: DotSecurityConfig) -> String:
+func _normalise(text: String, config: GSSecurityConfig) -> String:
 	if not config.duplicate_normalises:
 		return text
 
@@ -214,7 +214,7 @@ func _normalise(text: String, config: DotSecurityConfig) -> String:
 	return out
 
 
-static func _is_shouting(text: String, config: DotSecurityConfig) -> bool:
+static func _is_shouting(text: String, config: GSSecurityConfig) -> bool:
 	if text.length() < config.caps_min_length:
 		return false
 
@@ -240,7 +240,7 @@ static func _is_shouting(text: String, config: DotSecurityConfig) -> bool:
 	return float(upper) / float(letters) >= config.caps_ratio
 
 
-static func _has_link(text: String, config: DotSecurityConfig) -> bool:
+static func _has_link(text: String, config: GSSecurityConfig) -> bool:
 	var lowered := text.to_lower()
 
 	for allowed in config.link_allow:
@@ -261,32 +261,32 @@ func _wire_connections() -> void:
 	_wired.append("connections")
 
 
-func _on_client_state(session: DotClientSession) -> void:
+func _on_client_state(session: GSClientSession) -> void:
 	if session == null:
 		return
 
 	# CONNECTING is the only state every arrival passes through exactly once,
 	# which is what makes it the attempt. Counting SPAWNED instead would miss
 	# precisely the connections that never finish — the ones a flood is made of.
-	if session.state == DotClientSession.State.CONNECTING:
-		_connected_at[DotSecuritySubject.normalise_address(session.address)] = \
+	if session.state == GSClientSession.State.CONNECTING:
+		_connected_at[GSSecuritySubject.normalise_address(session.address)] = \
 			int(Time.get_unix_time_from_system())
 		guard.report_address(
-			DotSecurityEvent.CONNECT_ATTEMPT, session.address, 1.0,
+			GSSecurityEvent.CONNECT_ATTEMPT, session.address, 1.0,
 			{"uid": session.uid()}
 		)
-	elif session.state == DotClientSession.State.REJECTED:
+	elif session.state == GSClientSession.State.REJECTED:
 		guard.report_address(
-			DotSecurityEvent.CONNECT_REJECTED, session.address, 1.0,
+			GSSecurityEvent.CONNECT_REJECTED, session.address, 1.0,
 			{"reason": session.reject_reason}
 		)
 
 
-func _on_client_disconnected(session: DotClientSession, _reason: String) -> void:
+func _on_client_disconnected(session: GSClientSession, _reason: String) -> void:
 	if session == null:
 		return
 
-	var address := DotSecuritySubject.normalise_address(session.address)
+	var address := GSSecuritySubject.normalise_address(session.address)
 	var began := int(_connected_at.get(address, 0))
 	_connected_at.erase(address)
 
@@ -301,7 +301,7 @@ func _on_client_disconnected(session: DotClientSession, _reason: String) -> void
 	if float(lasted) <= guard.config.churn_window_sec \
 			and session.spawned_at <= 0:
 		guard.report_address(
-			DotSecurityEvent.CONNECT_CHURN, session.address, 1.0,
+			GSSecurityEvent.CONNECT_CHURN, session.address, 1.0,
 			{"lasted_sec": lasted}
 		)
 
@@ -318,13 +318,13 @@ func _wire_rcon() -> void:
 
 func _on_rcon_auth_failed(address: String, attempts: int) -> void:
 	guard.report_address(
-		DotSecurityEvent.RCON_AUTH_FAILED, address, 1.0, {"attempts": attempts}
+		GSSecurityEvent.RCON_AUTH_FAILED, address, 1.0, {"attempts": attempts}
 	)
 
 
 func _on_rcon_command(address: String, command: String) -> void:
 	guard.report_address(
-		DotSecurityEvent.RCON_COMMAND, address, 1.0, {"command": command}
+		GSSecurityEvent.RCON_COMMAND, address, 1.0, {"command": command}
 	)
 
 
@@ -345,7 +345,7 @@ func _wire_commands() -> void:
 	_wired.append("commands")
 
 
-func _on_command_refused(ctx: DotCmdContext, reason: String) -> void:
+func _on_command_refused(ctx: GSCmdContext, reason: String) -> void:
 	# Only a refusal about permission. An unknown command is somebody mistyping,
 	# and counting it would fire the rule on ordinary use.
 	if not reason.begins_with(REFUSAL_PERMISSION):
@@ -356,18 +356,18 @@ func _on_command_refused(ctx: DotCmdContext, reason: String) -> void:
 
 	if ctx.session != null:
 		guard.report_session(
-			DotSecurityEvent.COMMAND_DENIED, ctx.session, 1.0,
+			GSSecurityEvent.COMMAND_DENIED, ctx.session, 1.0,
 			{"command": ctx.command}
 		)
 	elif ctx.address != "":
 		guard.report_address(
-			DotSecurityEvent.COMMAND_DENIED, ctx.address, 1.0,
+			GSSecurityEvent.COMMAND_DENIED, ctx.address, 1.0,
 			{"command": ctx.command}
 		)
 
 
 ## The session behind a peer id, or null.
-func _session_for(peer: int) -> DotClientSession:
+func _session_for(peer: int) -> GSClientSession:
 	if server == null:
 		return null
 	return server.session_of(peer)
@@ -375,7 +375,7 @@ func _session_for(peer: int) -> DotClientSession:
 
 
 func _wire_auth() -> void:
-	var auth := DotRegistry.get_service(&"dot_auth_server")
+	var auth := GSRegistry.get_service(&"dot_auth_server")
 	if auth == null or not is_instance_valid(auth):
 		return
 
@@ -389,9 +389,9 @@ func _on_auth_rejected(reason: String, detail: String) -> void:
 	# GameSpice Auth reports why, not who. The address is taken from a session still mid-handshake; when none is, the event is dropped,
 	# since one attributed to nobody ("somebody, somewhere failed") would ban the next person to connect.
 	for session in server.sessions():
-		if session.state == DotClientSession.State.AUTHENTICATING:
+		if session.state == GSClientSession.State.AUTHENTICATING:
 			guard.report_address(
-				DotSecurityEvent.AUTH_FAILED, session.address, 1.0,
+				GSSecurityEvent.AUTH_FAILED, session.address, 1.0,
 				{"reason": reason, "detail": detail}
 			)
 			return

@@ -5,11 +5,11 @@ extends Node
 
 const SELFTEST_ARG := "--selftest"
 
-var server: DotServer
-var guard: DotSecurityManager
-var watch: DotSecurityWatch
-var feeds: DotBanFeeds
-var anticheat: DotAntiCheat
+var server: GSServer
+var guard: GSSecurityManager
+var watch: GSSecurityWatch
+var feeds: GSBanFeeds
+var anticheat: GSAntiCheat
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -28,7 +28,7 @@ var _failed := 0
 
 
 func _ready() -> void:
-	var config := DotServerConfig.new()
+	var config := GSServerConfig.new()
 	config.port = 0
 	config.max_players = 16
 	config.tickrate = 30
@@ -43,7 +43,7 @@ func _ready() -> void:
 	config.startup_config = ""
 	config.autoexec_config = ""
 
-	server = DotServer.new()
+	server = GSServer.new()
 	server.name = "Server"
 	server.config = config
 	server.config_file = ""
@@ -53,16 +53,16 @@ func _ready() -> void:
 	# The REAL GameSpice Moderation, not a mock: the durable half of every action goes
 	# through it, and a suite that stubbed it would be asserting against its own
 	# idea of that addon rather than against the addon.
-	var moderation := DotModerationManager.new()
+	var moderation := GSModerationManager.new()
 	moderation.name = "Moderation"
-	moderation.store = DotPunishmentStoreFile.new()
+	moderation.store = GSPunishmentStoreFile.new()
 	moderation.store.path = "user://secexample/punishments.json"
 	add_child(moderation)
 
-	guard = DotSecurityManager.new()
+	guard = GSSecurityManager.new()
 	guard.name = "Security"
-	guard.server_ref = DotNodeRef.of_path(NodePath("../Server"))
-	guard.config = DotSecurityConfig.new()
+	guard.server_ref = GSNodeRef.of_path(NodePath("../Server"))
+	guard.config = GSSecurityConfig.new()
 	# No file layers: the suite must assert against what it set, not against
 	# whatever an operator left in user://.
 	guard.config_file = ""
@@ -74,15 +74,15 @@ func _ready() -> void:
 	guard.config.warn_unknown_events = false
 	add_child(guard)
 
-	watch = DotSecurityWatch.new()
+	watch = GSSecurityWatch.new()
 	watch.name = "Watch"
-	watch.guard_ref = DotNodeRef.of_path(NodePath("../Security"))
+	watch.guard_ref = GSNodeRef.of_path(NodePath("../Security"))
 	add_child(watch)
 
-	anticheat = DotAntiCheat.new()
+	anticheat = GSAntiCheat.new()
 	anticheat.name = "AntiCheat"
-	anticheat.guard_ref = DotNodeRef.of_path(NodePath("../Security"))
-	anticheat.config = DotAntiCheatConfig.new()
+	anticheat.guard_ref = GSNodeRef.of_path(NodePath("../Security"))
+	anticheat.config = GSAntiCheatConfig.new()
 	anticheat.config_file = ""
 	anticheat.config.dry_run = false
 	anticheat.config.max_horizontal_speed = 100.0
@@ -103,7 +103,7 @@ func _ready() -> void:
 	timer.wait_time = 30.0
 	timer.autostart = true
 	timer.timeout.connect(func() -> void:
-		DotLog.info("example", "still running", guard.describe()))
+		GSLog.info("example", "still running", guard.describe()))
 	add_child(timer)
 
 
@@ -113,7 +113,7 @@ func _should_selftest() -> bool:
 		return true
 	if args.has("--serve"):
 		return false
-	return DotPlatform.is_headless()
+	return GSPlatform.is_headless()
 
 ## Overridden by the suite itself; the base only boots the guarded server.
 func _run_selftest() -> void:
@@ -141,24 +141,24 @@ func _check(what: String, passed: bool) -> void:
 
 func _run(line: String) -> String:
 	var lines := PackedStringArray()
-	var ctx := DotCmdContext.console("", PackedStringArray())
+	var ctx := GSCmdContext.console("", PackedStringArray())
 	ctx.reply_sink = func(text: String) -> void: lines.append(text)
 	server.console.execute(line, ctx)
 	return "\n".join(lines)
 
 
 ## A rule with a short window, so the suite does not wait on wall-clock time.
-func _rule(id: StringName, event: StringName, threshold: int) -> DotSecurityRule:
-	var rule := DotSecurityRule.of(id, event, threshold, 5.0)
+func _rule(id: StringName, event: StringName, threshold: int) -> GSSecurityRule:
+	var rule := GSSecurityRule.of(id, event, threshold, 5.0)
 	rule.cooldown_sec = 0.0
 	rule.exempt_flags = PackedStringArray()
-	rule.steps = [DotSecurityStep.of(DotSecurityAction.Kind.WARN)]
+	rule.steps = [GSSecurityStep.of(GSSecurityAction.Kind.WARN)]
 	return rule
 
 
 func _report(event: StringName, subject: String, times: int = 1) -> void:
 	for _i in range(times):
-		guard.report(DotSecurityEvent.make(event, subject))
+		guard.report(GSSecurityEvent.make(event, subject))
 
 
 

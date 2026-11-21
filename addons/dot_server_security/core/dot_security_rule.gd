@@ -1,9 +1,9 @@
 @tool
-class_name DotSecurityRule
+class_name GSSecurityRule
 extends Resource
 
 ## One thing the guard watches for: "this many of that event, from one subject, within this window", then take the next step on the ladder.
-## Everything else on it is about not catching the wrong person. Build one with [method of] and set [member steps]; the shipped set is in [DotSecurityPolicy].
+## Everything else on it is about not catching the wrong person. Build one with [method of] and set [member steps]; the shipped set is in [GSSecurityPolicy].
 
 ## Identifier, used in `sec_status`, in the ledger and to disable one rule.
 @export var id: StringName = &""
@@ -13,7 +13,7 @@ extends Resource
 
 @export_group("What to watch")
 
-## The event this counts. See [DotSecurityEvent] for the shipped vocabulary.
+## The event this counts. See [GSSecurityEvent] for the shipped vocabulary.
 ## Any name works, including a game's own.
 @export var event: StringName = &""
 
@@ -27,15 +27,15 @@ extends Resource
 @export_group("Who it is against")
 
 ## Whether the count follows the account, the address, or both separately.
-@export var scope: DotSecuritySubject.Scope = DotSecuritySubject.Scope.UID
+@export var scope: GSSecuritySubject.Scope = GSSecuritySubject.Scope.UID
 
 @export_group("What to do")
 
 ## The escalation ladder. Empty falls back to [member action] every time.
-@export var steps: Array[DotSecurityStep] = []
+@export var steps: Array[GSSecurityStep] = []
 
 ## The action taken when there are no [member steps]. Flat, every time.
-@export var action: DotSecurityAction.Kind = DotSecurityAction.Kind.WARN
+@export var action: GSSecurityAction.Kind = GSSecurityAction.Kind.WARN
 
 ## Duration for [member action]. Ignored when [member steps] is set.
 @export var duration_sec: int = 0
@@ -76,8 +76,8 @@ static func of(
 	p_event: StringName,
 	p_threshold: int,
 	p_window_sec: float
-) -> DotSecurityRule:
-	var rule := DotSecurityRule.new()
+) -> GSSecurityRule:
+	var rule := GSSecurityRule.new()
 	rule.id = p_id
 	rule.event = p_event
 	rule.threshold = p_threshold
@@ -88,21 +88,21 @@ static func of(
 
 ## The step for the nth offence, counting from 1.
 ## Past the end of the ladder the last step repeats; reverting to nothing would reward persistence.
-func step_for(offence: int) -> DotSecurityStep:
+func step_for(offence: int) -> GSSecurityStep:
 	if steps.is_empty():
-		return DotSecurityStep.of(action, duration_sec)
+		return GSSecurityStep.of(action, duration_sec)
 
 	var index := clampi(offence - 1, 0, steps.size() - 1)
 	var step := steps[index]
 
 	if step == null:
-		return DotSecurityStep.of(action, duration_sec)
+		return GSSecurityStep.of(action, duration_sec)
 
 	return step
 
 
 ## Whether this rule declines to act on a session, and why. Empty means it acts.
-func exemption_for(session: DotClientSession) -> String:
+func exemption_for(session: GSClientSession) -> String:
 	if session == null:
 		# No session is not an exemption. Most of what a connect or RCON rule
 		# catches has no session by definition, and treating that as exempt
@@ -137,51 +137,51 @@ func render_reason(count: float, offence: int) -> String:
 
 
 
-func validate() -> DotResult:
+func validate() -> GSResult:
 	if String(id).strip_edges() == "":
-		return DotResult.fail(DotError.CODE_INVALID, "A rule needs an id.")
+		return GSResult.fail(GSError.CODE_INVALID, "A rule needs an id.")
 
 	if String(event).strip_edges() == "":
-		return DotResult.fail(
-			DotError.CODE_INVALID, "Rule '%s' watches no event." % id
+		return GSResult.fail(
+			GSError.CODE_INVALID, "Rule '%s' watches no event." % id
 		)
 
 	if threshold < 1:
-		return DotResult.fail(
-			DotError.CODE_INVALID, "Rule '%s' has a threshold below 1." % id
+		return GSResult.fail(
+			GSError.CODE_INVALID, "Rule '%s' has a threshold below 1." % id
 		)
 
 	if window_sec <= 0.0:
-		return DotResult.fail(
-			DotError.CODE_INVALID, "Rule '%s' has no window." % id
+		return GSResult.fail(
+			GSError.CODE_INVALID, "Rule '%s' has no window." % id
 		)
 
 	for step in steps:
 		if step == null:
-			return DotResult.fail(
-				DotError.CODE_INVALID, "Rule '%s' has an empty step." % id
+			return GSResult.fail(
+				GSError.CODE_INVALID, "Rule '%s' has an empty step." % id
 			)
 
 	# Named rather than refused: a rule whose cooldown is shorter than its window
 	# can walk its whole ladder inside one burst, which is legitimate for a rule
 	# whose first step already removes the player and a mistake for any other.
 	if cooldown_sec < window_sec and steps.size() > 1 \
-			and not DotSecurityAction.is_removal(step_for(1).action):
-		DotLog.warn(
+			and not GSSecurityAction.is_removal(step_for(1).action):
+		GSLog.warn(
 			"security",
 			"rule '%s' can escalate more than once inside its own window"
 				% id,
 			{"cooldown_sec": cooldown_sec, "window_sec": window_sec}
 		)
 
-	return DotResult.success(self)
+	return GSResult.success(self)
 
 
 
 ## Reads a rule from a dictionary, which is how an operator writes one.
 ## The configuration surface that matters: a rule only expressible in GDScript is one most operators will not tune.
-static func from_dictionary(raw: Dictionary) -> DotResult:
-	var rule := DotSecurityRule.new()
+static func from_dictionary(raw: Dictionary) -> GSResult:
+	var rule := GSSecurityRule.new()
 
 	rule.id = StringName(str(raw.get("id", "")))
 	rule.event = StringName(str(raw.get("event", "")))
@@ -198,14 +198,14 @@ static func from_dictionary(raw: Dictionary) -> DotResult:
 		rule.reason = str(raw["reason"])
 
 	if raw.has("scope"):
-		var scope := DotSecuritySubject.parse_scope(str(raw["scope"]))
+		var scope := GSSecuritySubject.parse_scope(str(raw["scope"]))
 		if scope < 0:
-			return DotResult.fail(
-				DotError.CODE_INVALID,
+			return GSResult.fail(
+				GSError.CODE_INVALID,
 				"'%s' is not a scope." % str(raw["scope"]),
 				"try uid, address or both"
 			)
-		rule.scope = scope as DotSecuritySubject.Scope
+		rule.scope = scope as GSSecuritySubject.Scope
 
 	if raw.has("exempt_flags"):
 		var flags: Variant = raw["exempt_flags"]
@@ -216,33 +216,33 @@ static func from_dictionary(raw: Dictionary) -> DotResult:
 			rule.exempt_flags = out
 
 	if raw.has("action"):
-		var parsed := DotSecurityAction.parse_kind(str(raw["action"]))
+		var parsed := GSSecurityAction.parse_kind(str(raw["action"]))
 		if parsed < 0:
-			return DotResult.fail(
-				DotError.CODE_INVALID, "'%s' is not an action." % str(raw["action"])
+			return GSResult.fail(
+				GSError.CODE_INVALID, "'%s' is not an action." % str(raw["action"])
 			)
-		rule.action = parsed as DotSecurityAction.Kind
+		rule.action = parsed as GSSecurityAction.Kind
 
 	rule.duration_sec = int(raw.get("duration_sec", 0))
 
 	if raw.has("steps"):
 		var steps_raw: Variant = raw["steps"]
 		if not (steps_raw is Array):
-			return DotResult.fail(
-				DotError.CODE_INVALID, "Rule '%s': steps must be a list." % rule.id
+			return GSResult.fail(
+				GSError.CODE_INVALID, "Rule '%s': steps must be a list." % rule.id
 			)
 
-		var built: Array[DotSecurityStep] = []
+		var built: Array[GSSecurityStep] = []
 		for entry in (steps_raw as Array):
 			if not (entry is Dictionary):
-				return DotResult.fail(
-					DotError.CODE_INVALID,
+				return GSResult.fail(
+					GSError.CODE_INVALID,
 					"Rule '%s': every step must be an object." % rule.id
 				)
-			var step := DotSecurityStep.from_dictionary(entry as Dictionary)
+			var step := GSSecurityStep.from_dictionary(entry as Dictionary)
 			if not step.ok:
 				return step.wrap("rule '%s'" % rule.id)
-			built.append(step.value as DotSecurityStep)
+			built.append(step.value as GSSecurityStep)
 		rule.steps = built
 
 	return rule.validate()
@@ -255,7 +255,7 @@ func to_dictionary() -> Dictionary:
 		"event": String(event),
 		"threshold": threshold,
 		"window_sec": window_sec,
-		"scope": DotSecuritySubject.scope_name(scope),
+		"scope": GSSecuritySubject.scope_name(scope),
 		"cooldown_sec": cooldown_sec,
 		"offence_memory_sec": offence_memory_sec,
 		"reason": reason,
@@ -269,7 +269,7 @@ func to_dictionary() -> Dictionary:
 		out["exempt_flags"] = Array(exempt_flags)
 
 	if steps.is_empty():
-		out["action"] = DotSecurityAction.kind_name(action)
+		out["action"] = GSSecurityAction.kind_name(action)
 		if duration_sec > 0:
 			out["duration_sec"] = duration_sec
 	else:
@@ -284,13 +284,13 @@ func to_dictionary() -> Dictionary:
 func describe() -> String:
 	var ladder := PackedStringArray()
 	if steps.is_empty():
-		ladder.append(DotSecurityStep.of(action, duration_sec).describe())
+		ladder.append(GSSecurityStep.of(action, duration_sec).describe())
 	else:
 		for step in steps:
 			ladder.append(step.describe())
 
 	return "%s: %d x %s in %.0fs per %s -> %s" % [
 		id, threshold, event, window_sec,
-		DotSecuritySubject.scope_name(scope),
+		GSSecuritySubject.scope_name(scope),
 		" then ".join(Array(ladder)),
 	]

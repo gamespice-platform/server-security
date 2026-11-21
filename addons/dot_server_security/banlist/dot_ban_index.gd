@@ -1,4 +1,4 @@
-class_name DotBanIndex
+class_name GSBanIndex
 extends RefCounted
 
 ## The merged contents of every ban feed, and the thing a join is checked against.
@@ -40,7 +40,7 @@ func add_uid(uid: String, reason: String) -> void:
 
 ## Adds an address, a CIDR range, or an IPv6 prefix, whichever it is.
 func add_address(address: String, reason: String) -> void:
-	var text := DotSecuritySubject.normalise_address(address)
+	var text := GSSecuritySubject.normalise_address(address)
 	if text == "":
 		return
 
@@ -81,7 +81,7 @@ func reason_for_uid(uid: String) -> String:
 
 ## Why this address is refused, or an empty string.
 func reason_for_address(address: String) -> String:
-	var text := DotSecuritySubject.normalise_address(address)
+	var text := GSSecuritySubject.normalise_address(address)
 	if text == "":
 		return ""
 

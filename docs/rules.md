@@ -8,7 +8,7 @@ There is no separate chat-spam system, connection-flood system and anti-cheat sy
 
 ```
 watchers ──┐
-detectors ─┼──> DotSecurityEvent ──> sliding window per (rule, subject)
+detectors ─┼──> GSSecurityEvent ──> sliding window per (rule, subject)
 a game ────┘                              │
                                    threshold reached?
                                           │
@@ -21,13 +21,13 @@ a game ────┘                              │
                    (durable record)                  (dies with the socket)
 ```
 
-**Anti-cheat is not a special case.** A detection is a `DotSecurityEvent` like any other, so "three impossible speeds in a minute, then ban" is a rule rather than code, and it gets windows, escalation, exemptions, dry run, the ledger and `sec_why` for free. A second copy of any of that machinery would have drifted from the first within a month.
+**Anti-cheat is not a special case.** A detection is a `GSSecurityEvent` like any other, so "three impossible speeds in a minute, then ban" is a rule rather than code, and it gets windows, escalation, exemptions, dry run, the ledger and `sec_why` for free. A second copy of any of that machinery would have drifted from the first within a month.
 
-The event vocabulary is open on purpose: a game reports its own events. `warn_unknown_events` warns at boot about a rule whose event nothing reports, and it must know the anti-cheat events as well as `DotSecurityEvent.KNOWN`.
+The event vocabulary is open on purpose: a game reports its own events. `warn_unknown_events` warns at boot about a rule whose event nothing reports, and it must know the anti-cheat events as well as `GSSecurityEvent.KNOWN`.
 
 ## It ships in dry run, and that is a decision
 
-`DotSecurityConfig.dry_run` defaults to **true**. Every rule evaluates, every trip is logged and ledgered marked `WOULD`, and nobody is punished.
+`GSSecurityConfig.dry_run` defaults to **true**. Every rule evaluates, every trip is logged and ledgered marked `WOULD`, and nobody is punished.
 
 An addon that starts punishing an existing community the moment it is installed, on thresholds nobody chose, against a chat culture it has never seen, is one that gets uninstalled after the first false positive, and then the server has no guard at all. The shipped thresholds are timid for the same reason, and every ladder still goes somewhere.
 
@@ -57,9 +57,9 @@ dot-moderation, dot-chat and dot-auth are optional, and a script mentioning a `c
 
 | Here | There | If they drift |
 | --- | --- | --- |
-| `DotSecuritySubject.PREFIX_UID` / `PREFIX_ADDRESS` | GameSpice Moderation's `DotPunishmentSubject` | every punishment is filed against a subject nothing else can find |
-| `DotSecurityAction.MOD_KIND_*` | GameSpice Moderation's `DotPunishment.Kind` | a gag is issued as a ban |
-| `DotSecurityWatch.REFUSAL_PERMISSION` | GameSpice Server's `command_refused` wording | `command.denied` silently stops counting |
+| `GSSecuritySubject.PREFIX_UID` / `PREFIX_ADDRESS` | GameSpice Moderation's `GSPunishmentSubject` | every punishment is filed against a subject nothing else can find |
+| `GSSecurityAction.MOD_KIND_*` | GameSpice Moderation's `GSPunishment.Kind` | a gag is issued as a ban |
+| `GSSecurityWatch.REFUSAL_PERMISSION` | GameSpice Server's `command_refused` wording | `command.denied` silently stops counting |
 
 **All three are asserted against the real addons in the suite**, which is why they are linked into this project. A comment does not fail when the other side changes.
 
@@ -78,7 +78,7 @@ Both, always, when both can:
 
 ## Finding the moderation store
 
-**The store is found late, never latched at attach.** GameSpice Moderation's manager is built by the game, inside a module GameSpice Server loads *after* the listener is open, while a `DotSecurityManager` attaches as the server boots. So `moderation_store()` returns the cached answer when there is one and looks the registry up again when there is not; `is_instance_valid` covers the game change that frees the old store and builds a new one. `describe()` and `sec_status` ask the same way, and the boot line says "not yet" rather than "no moderation store". Why this matters: [history](history.md#the-guard-latched-the-moderation-store-at-boot).
+**The store is found late, never latched at attach.** GameSpice Moderation's manager is built by the game, inside a module GameSpice Server loads *after* the listener is open, while a `GSSecurityManager` attaches as the server boots. So `moderation_store()` returns the cached answer when there is one and looks the registry up again when there is not; `is_instance_valid` covers the game change that frees the old store and builds a new one. `describe()` and `sec_status` ask the same way, and the boot line says "not yet" rather than "no moderation store". Why this matters: [history](history.md#the-guard-latched-the-moderation-store-at-boot).
 
 The console surface (`sec_status`, `sec_why`, `sv_security`) is registered after the server's `state_changed`, because a guard placed beside a server is ready before the console exists.
 
@@ -86,5 +86,5 @@ The console surface (`sec_status`, `sec_why`, `sv_security`) is registered after
 
 - **A client-side component** or **wallhack detection**: see [anticheat.md](anticheat.md#what-this-cannot-do).
 - **Machine learning over aim traces.** The published work on it is real and needs a labelled dataset from your own game to be worth anything; the hooks here (`observe_aim`, `observe_trigger`) are where such a model would plug in, and a model shipped without your data would be a random number generator with a confusion matrix.
-- **Its own ban storage.** GameSpice Moderation is the durable store and `DotBanFeeds` is the read-only external half. Two write targets is the two-lists problem.
-- **Rate limiting the game's own traffic.** GameSpice Server's `DotAddressGuard` caps connections per address and GameSpice Server Query rate-limits queries; both are in the right places already.
+- **Its own ban storage.** GameSpice Moderation is the durable store and `GSBanFeeds` is the read-only external half. Two write targets is the two-lists problem.
+- **Rate limiting the game's own traffic.** GameSpice Server's `GSAddressGuard` caps connections per address and GameSpice Server Query rate-limits queries; both are in the right places already.

@@ -1,4 +1,4 @@
-class_name DotSecurityCommands
+class_name GSSecurityCommands
 extends RefCounted
 
 ## The operator's view of the guard, as console commands and two cvars.
@@ -9,7 +9,7 @@ extends RefCounted
 # they describe logs its own decisions.
 
 
-static func register(guard: DotSecurityManager, console: DotConsole) -> void:
+static func register(guard: GSSecurityManager, console: GSConsole) -> void:
 	_register_cvars(guard, console)
 	_register_status(guard, console)
 	_register_rules(guard, console)
@@ -21,14 +21,14 @@ static func register(guard: DotSecurityManager, console: DotConsole) -> void:
 
 # Reached through the registry rather than held: the feeds are a separate node an operator may not have added.
 
-static func _bans() -> DotBanFeeds:
-	return DotRegistry.get_service(DotBanFeeds.SERVICE) as DotBanFeeds
+static func _bans() -> GSBanFeeds:
+	return GSRegistry.get_service(GSBanFeeds.SERVICE) as GSBanFeeds
 
 
-static func _register_bans(_guard: DotSecurityManager, console: DotConsole) -> void:
+static func _register_bans(_guard: GSSecurityManager, console: GSConsole) -> void:
 	console.command(
 		"sec_bans",
-		func(ctx: DotCmdContext) -> void:
+		func(ctx: GSCmdContext) -> void:
 			var feeds := _bans()
 			if feeds == null:
 				ctx.reply("No ban feeds are configured.")
@@ -40,7 +40,7 @@ static func _register_bans(_guard: DotSecurityManager, console: DotConsole) -> v
 
 	console.command(
 		"sec_bans_refresh",
-		func(ctx: DotCmdContext) -> void:
+		func(ctx: GSCmdContext) -> void:
 			var feeds := _bans()
 			if feeds == null:
 				ctx.reply("No ban feeds are configured.")
@@ -61,12 +61,12 @@ static func _register_bans(_guard: DotSecurityManager, console: DotConsole) -> v
 			ctx.reply("Refreshing '%s'." % id)
 			feeds.fetch(feed),
 		"Fetch the ban lists now. sec_bans_refresh [feed]",
-		DotAdminFlags.CONFIG
+		GSAdminFlags.CONFIG
 	)
 
 	console.command(
 		"sec_bans_check",
-		func(ctx: DotCmdContext) -> void:
+		func(ctx: GSCmdContext) -> void:
 			var feeds := _bans()
 			if feeds == null:
 				ctx.reply("No ban feeds are configured.")
@@ -91,21 +91,21 @@ static func _register_bans(_guard: DotSecurityManager, console: DotConsole) -> v
 			if by_address != "":
 				ctx.reply("address: %s" % by_address),
 		"Ask whether somebody is on a fetched ban list. sec_bans_check <who>",
-		DotAdminFlags.GENERIC
+		GSAdminFlags.GENERIC
 	)
 
 
 
-static func _anticheat() -> DotAntiCheat:
-	return DotRegistry.get_service(DotAntiCheat.SERVICE) as DotAntiCheat
+static func _anticheat() -> GSAntiCheat:
+	return GSRegistry.get_service(GSAntiCheat.SERVICE) as GSAntiCheat
 
 
 static func _register_anticheat(
-	_guard: DotSecurityManager, console: DotConsole
+	_guard: GSSecurityManager, console: GSConsole
 ) -> void:
 	console.command(
 		"sec_ac_status",
-		func(ctx: DotCmdContext) -> void:
+		func(ctx: GSCmdContext) -> void:
 			var ac := _anticheat()
 			if ac == null:
 				ctx.reply("No anti-cheat detectors are running.")
@@ -118,7 +118,7 @@ static func _register_anticheat(
 
 	console.command(
 		"sec_ac_dryrun",
-		func(ctx: DotCmdContext) -> void:
+		func(ctx: GSCmdContext) -> void:
 			var ac := _anticheat()
 			if ac == null:
 				ctx.reply("No anti-cheat detectors are running.")
@@ -134,11 +134,11 @@ static func _register_anticheat(
 				% ("on" if ac.config.dry_run else "off")),
 		"Report detections without reporting them to the rules. "
 			+ "sec_ac_dryrun [0|1]",
-		DotAdminFlags.CONFIG
+		GSAdminFlags.CONFIG
 	)
 
 
-static func _register_cvars(guard: DotSecurityManager, console: DotConsole) -> void:
+static func _register_cvars(guard: GSSecurityManager, console: GSConsole) -> void:
 	# Live rather than startup-only. An operator turns a guard off while the
 	# thing it is doing wrong is happening, and one that needs a restart arrives
 	# after they have already been driven to uninstall it.
@@ -146,21 +146,21 @@ static func _register_cvars(guard: DotSecurityManager, console: DotConsole) -> v
 		"sv_security",
 		"1" if guard.config.enabled else "0",
 		"Watch for abuse. 0 counts nothing and acts on nothing.",
-		DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY
+		GSConVar.FLAG_ARCHIVE | GSConVar.FLAG_NOTIFY
 	)
 
 	console.cvar(
 		"sv_security_dryrun",
 		"1" if guard.config.dry_run else "0",
 		"Count and log, never punish. The setting to leave on while tuning.",
-		DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY
+		GSConVar.FLAG_ARCHIVE | GSConVar.FLAG_NOTIFY
 	)
 
 
-static func _register_status(guard: DotSecurityManager, console: DotConsole) -> void:
+static func _register_status(guard: GSSecurityManager, console: GSConsole) -> void:
 	console.command(
 		"sec_status",
-		func(ctx: DotCmdContext) -> void:
+		func(ctx: GSCmdContext) -> void:
 			ctx.reply("[security]")
 			ctx.reply_lines(guard.describe_lines())
 
@@ -179,7 +179,7 @@ static func _register_status(guard: DotSecurityManager, console: DotConsole) -> 
 
 	console.command(
 		"sec_log",
-		func(ctx: DotCmdContext) -> void:
+		func(ctx: GSCmdContext) -> void:
 			var count := ctx.arg_int(0, 30)
 			var recent := guard.ledger.recent(maxi(1, count))
 
@@ -190,14 +190,14 @@ static func _register_status(guard: DotSecurityManager, console: DotConsole) -> 
 			for entry in recent:
 				ctx.reply(entry.describe()),
 		"Print the last N decisions. sec_log [count]",
-		DotAdminFlags.GENERIC
+		GSAdminFlags.GENERIC
 	)
 
 
-static func _register_rules(guard: DotSecurityManager, console: DotConsole) -> void:
+static func _register_rules(guard: GSSecurityManager, console: GSConsole) -> void:
 	console.command(
 		"sec_rules",
-		func(ctx: DotCmdContext) -> void:
+		func(ctx: GSCmdContext) -> void:
 			var lines := guard.policy.describe_lines()
 			if lines.is_empty():
 				ctx.reply("No rules are configured.")
@@ -208,7 +208,7 @@ static func _register_rules(guard: DotSecurityManager, console: DotConsole) -> v
 
 	console.command(
 		"sec_rule",
-		func(ctx: DotCmdContext) -> void:
+		func(ctx: GSCmdContext) -> void:
 			var id := StringName(ctx.arg(0))
 			var rule := guard.policy.find(id)
 
@@ -218,48 +218,48 @@ static func _register_rules(guard: DotSecurityManager, console: DotConsole) -> v
 
 			ctx.reply(JSON.stringify(rule.to_dictionary(), "  ")),
 		"Print one rule as the JSON an operator would write. sec_rule <id>",
-		DotAdminFlags.GENERIC
+		GSAdminFlags.GENERIC
 	)
 
 	console.command(
 		"sec_enable",
-		func(ctx: DotCmdContext) -> void:
+		func(ctx: GSCmdContext) -> void:
 			var res := guard.set_rule_enabled(StringName(ctx.arg(0)), true)
 			if not res.ok:
 				ctx.reply_error(res)
 				return
 			ctx.reply("Rule '%s' is on." % ctx.arg(0)),
 		"Turn one rule on. sec_enable <id>",
-		DotAdminFlags.GENERIC
+		GSAdminFlags.GENERIC
 	)
 
 	console.command(
 		"sec_disable",
-		func(ctx: DotCmdContext) -> void:
+		func(ctx: GSCmdContext) -> void:
 			var res := guard.set_rule_enabled(StringName(ctx.arg(0)), false)
 			if not res.ok:
 				ctx.reply_error(res)
 				return
 			ctx.reply("Rule '%s' is off." % ctx.arg(0)),
 		"Turn one rule off. sec_disable <id>",
-		DotAdminFlags.GENERIC
+		GSAdminFlags.GENERIC
 	)
 
 	console.command(
 		"sec_reload",
-		func(ctx: DotCmdContext) -> void:
+		func(ctx: GSCmdContext) -> void:
 			var res := guard.reload_rules()
 			if not res.ok:
 				ctx.reply_error(res)
 				return
 			ctx.reply("Reloaded: %d rules active." % int(res.value)),
 		"Reread the rules file, so tuning does not need a restart.",
-		DotAdminFlags.CONFIG
+		GSAdminFlags.CONFIG
 	)
 
 	console.command(
 		"sec_dump",
-		func(ctx: DotCmdContext) -> void:
+		func(ctx: GSCmdContext) -> void:
 			var path := ctx.arg(0, guard.config.rules_file)
 			var res := guard.policy.save_json_file(path)
 			if not res.ok:
@@ -267,14 +267,14 @@ static func _register_rules(guard: DotSecurityManager, console: DotConsole) -> v
 				return
 			ctx.reply("Wrote the effective rule set to %s." % path),
 		"Write the rules in force to a file, to copy and edit. sec_dump [path]",
-		DotAdminFlags.CONFIG
+		GSAdminFlags.CONFIG
 	)
 
 
-static func _register_subjects(guard: DotSecurityManager, console: DotConsole) -> void:
+static func _register_subjects(guard: GSSecurityManager, console: GSConsole) -> void:
 	console.command(
 		"sec_why",
-		func(ctx: DotCmdContext) -> void:
+		func(ctx: GSCmdContext) -> void:
 			var needle := ctx.rest(0).strip_edges()
 
 			if needle == "":
@@ -291,12 +291,12 @@ static func _register_subjects(guard: DotSecurityManager, console: DotConsole) -
 			for entry in found:
 				ctx.reply("  " + entry.describe()),
 		"Explain what the guard did to somebody, and why. sec_why <who>",
-		DotAdminFlags.GENERIC
+		GSAdminFlags.GENERIC
 	)
 
 	console.command(
 		"sec_forget",
-		func(ctx: DotCmdContext) -> void:
+		func(ctx: GSCmdContext) -> void:
 			var target := ctx.rest(0).strip_edges()
 
 			if target == "":
@@ -311,11 +311,11 @@ static func _register_subjects(guard: DotSecurityManager, console: DotConsole) -
 			# Accepts a bare uid or address as well as a prefixed subject,
 			# because an operator reads a name out of `status` and types that.
 			var subjects := PackedStringArray([target])
-			if not DotSecuritySubject.is_uid(target) \
-					and not DotSecuritySubject.is_address(target):
+			if not GSSecuritySubject.is_uid(target) \
+					and not GSSecuritySubject.is_address(target):
 				subjects = PackedStringArray([
-					DotSecuritySubject.for_uid(target),
-					DotSecuritySubject.for_address(target),
+					GSSecuritySubject.for_uid(target),
+					GSSecuritySubject.for_address(target),
 				])
 
 			var cleared := 0
@@ -327,15 +327,15 @@ static func _register_subjects(guard: DotSecurityManager, console: DotConsole) -
 			ctx.reply("Cleared %d offence record(s) and every counter for %s."
 				% [cleared, target]),
 		"Forget a subject's counters and offence history. sec_forget <who|all>",
-		DotAdminFlags.GENERIC
+		GSAdminFlags.GENERIC
 	)
 
 
 
-static func _register_test(guard: DotSecurityManager, console: DotConsole) -> void:
+static func _register_test(guard: GSSecurityManager, console: GSConsole) -> void:
 	console.command(
 		"sec_test",
-		func(ctx: DotCmdContext) -> void:
+		func(ctx: GSCmdContext) -> void:
 			var event_name := ctx.arg(0)
 			var who := ctx.arg(1)
 			var times := maxi(1, ctx.arg_int(2, 1))
@@ -343,17 +343,17 @@ static func _register_test(guard: DotSecurityManager, console: DotConsole) -> vo
 			if event_name == "" or who == "":
 				ctx.reply("sec_test <event> <uid|address> [times]")
 				ctx.reply("Events: %s" % ", ".join(
-					Array(DotSecurityEvent.KNOWN).map(func(n): return String(n))
+					Array(GSSecurityEvent.KNOWN).map(func(n): return String(n))
 				))
 				return
 
 			var subject := who
-			if not DotSecuritySubject.is_uid(who) \
-					and not DotSecuritySubject.is_address(who):
-				subject = DotSecuritySubject.for_uid(who)
+			if not GSSecuritySubject.is_uid(who) \
+					and not GSSecuritySubject.is_address(who):
+				subject = GSSecuritySubject.for_uid(who)
 
 			for _i in range(times):
-				guard.report(DotSecurityEvent.make(
+				guard.report(GSSecurityEvent.make(
 					StringName(event_name), subject, 1.0, {"source": "sec_test"}
 				))
 
@@ -361,5 +361,5 @@ static func _register_test(guard: DotSecurityManager, console: DotConsole) -> vo
 			ctx.reply("sec_status shows what it did."),
 		"Feed the guard synthetic events, to check a rule fires. "
 			+ "sec_test <event> <who> [times]",
-		DotAdminFlags.CHEATS
+		GSAdminFlags.CHEATS
 	)

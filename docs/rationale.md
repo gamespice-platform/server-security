@@ -12,11 +12,11 @@ A structure that grows one entry per event and one bucket per address is a memor
 
 ## Client-supplied text is escaped before it is logged
 
-An anti-cheat detail can contain what the client said (its build string, a weapon id). `DotLog.format_fields` quotes a value but does not escape a newline, so a build string of `x\ninf security ...` once wrote a second, forged record into the log an admin reads to decide who cheated, and a megabyte one wrote a megabyte per detection. Strings are escaped and cut on the one path that logs a detail; numbers the server measured pass through.
+An anti-cheat detail can contain what the client said (its build string, a weapon id). `GSLog.format_fields` quotes a value but does not escape a newline, so a build string of `x\ninf security ...` once wrote a second, forged record into the log an admin reads to decide who cheated, and a megabyte one wrote a megabyte per detection. Strings are escaped and cut on the one path that logs a detail; numbers the server measured pass through.
 
 ## The moderation store is looked up again, not latched
 
-A `DotSecurityManager` placed beside a server attaches as the server boots, but GameSpice Moderation's manager is built by the game in a module loaded afterwards, so the registry lookup at attach is null on every server that has a store. Latching that answer made every gag, mute and ban fall back to the session, which dies with the connection: nothing errored, because a server with no store is a supported configuration. The lookup is repeated until found and dropped when a game change frees the store.
+A `GSSecurityManager` placed beside a server attaches as the server boots, but GameSpice Moderation's manager is built by the game in a module loaded afterwards, so the registry lookup at attach is null on every server that has a store. Latching that answer made every gag, mute and ban fall back to the session, which dies with the connection: nothing errored, because a server with no store is a supported configuration. The lookup is repeated until found and dropped when a game change frees the store.
 
 ## Console registration waits for the console
 

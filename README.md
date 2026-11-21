@@ -12,10 +12,10 @@ Every rule starts in dry run. It counts, logs and fills in `sec_status`, and pun
 2. Either use [GameSpice Bootstrap](https://github.com/gamespice-platform/bootstrap), which clones every project and links the addons, or copy `addons/dot_server_security/`, [GameSpice Core](https://github.com/gamespice-platform/core)'s `addons/dot_core/` and [GameSpice Server](https://github.com/gamespice-platform/server)'s `addons/dot_server/` into your project and enable dot-server-security in *Project > Project Settings > Plugins*.
 
 ```gdscript
-var guard := DotSecurityManager.new()
+var guard := GSSecurityManager.new()
 server.add_child(guard)
 
-var watch := DotSecurityWatch.new()      # wires it to everything worth watching
+var watch := GSSecurityWatch.new()      # wires it to everything worth watching
 server.add_child(watch)
 ```
 

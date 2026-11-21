@@ -48,7 +48,7 @@ func _test_ban_index() -> void:
 	print("")
 	_section("[ban index]")
 
-	var index := DotBanIndex.new()
+	var index := GSBanIndex.new()
 	index.add_uid("banned-account", "listed")
 	index.add_address("203.0.113.7", "listed")
 	index.add_address("198.51.100.0/24", "a whole range")
@@ -72,13 +72,13 @@ func _test_ban_index() -> void:
 		index.reason_for_address("::ffff:203.0.113.7") != "")
 
 	_check("an address is recognised as one",
-		DotBanIndex.looks_like_address("10.0.0.1"))
+		GSBanIndex.looks_like_address("10.0.0.1"))
 	_check("a range is recognised as one",
-		DotBanIndex.looks_like_address("10.0.0.0/8"))
+		GSBanIndex.looks_like_address("10.0.0.0/8"))
 	_check("an account id is not",
-		not DotBanIndex.looks_like_address("player-12345"))
+		not GSBanIndex.looks_like_address("player-12345"))
 	_check("nor is nonsense that looks numeric",
-		not DotBanIndex.looks_like_address("999.999.999.999"))
+		not GSBanIndex.looks_like_address("999.999.999.999"))
 	_done()
 
 
@@ -86,11 +86,11 @@ func _test_ban_feed_parsing() -> void:
 	print("")
 	_section("[ban feed parsing]")
 
-	var feed := DotBanFeed.of(&"t", "https://example.org/list")
+	var feed := GSBanFeed.of(&"t", "https://example.org/list")
 
 	# A bare array of strings: the commonest shape there is, and it says
 	# nothing about what its entries are.
-	var bare := DotBanFeeds.parse_payload(feed, ["1.2.3.4", "player-99"])
+	var bare := GSBanFeeds.parse_payload(feed, ["1.2.3.4", "player-99"])
 	_check("a bare list parses", bare.ok)
 	_check("an address entry is guessed",
 		bare.ok and (bare.value as Array)[0].has("address"))
@@ -98,7 +98,7 @@ func _test_ban_feed_parsing() -> void:
 		bare.ok and (bare.value as Array)[1].has("uid"))
 
 	# An array of objects with differently-named fields.
-	var objects := DotBanFeeds.parse_payload(feed, [
+	var objects := GSBanFeeds.parse_payload(feed, [
 		{"user_id": "abc", "reason": "cheating"},
 		{"ip_address": "5.6.7.8"},
 	])
@@ -111,22 +111,22 @@ func _test_ban_feed_parsing() -> void:
 		objects.ok and (objects.value as Array)[1].has("address"))
 
 	# A wrapper object, with and without a configured path.
-	var wrapped := DotBanFeeds.parse_payload(feed, {"data": ["9.9.9.9"]})
+	var wrapped := GSBanFeeds.parse_payload(feed, {"data": ["9.9.9.9"]})
 	_check("a conventional wrapper is unwrapped",
 		wrapped.ok and (wrapped.value as Array).size() == 1)
 
 	feed.list_path = "result.bans"
-	var pathed := DotBanFeeds.parse_payload(
+	var pathed := GSBanFeeds.parse_payload(
 		feed, {"result": {"bans": ["8.8.8.8"]}}
 	)
 	_check("an explicit path is followed",
 		pathed.ok and (pathed.value as Array).size() == 1)
 	_check("a wrong path is refused",
-		not DotBanFeeds.parse_payload(feed, {"nothing": []}).ok)
+		not GSBanFeeds.parse_payload(feed, {"nothing": []}).ok)
 	feed.list_path = ""
 
 	# The split-object shape.
-	var split := DotBanFeeds.parse_payload(
+	var split := GSBanFeeds.parse_payload(
 		feed, {"uids": ["a", "b"], "ips": ["1.1.1.1"]}
 	)
 	_check("a split object parses",
@@ -134,7 +134,7 @@ func _test_ban_feed_parsing() -> void:
 
 	# An expired entry enforced until the next fetch is how somebody stays
 	# banned for a week after their day was up.
-	var expired := DotBanFeeds.parse_payload(feed, [
+	var expired := GSBanFeeds.parse_payload(feed, [
 		{"uid": "gone", "expires": 1},
 		{"uid": "current", "expires": 99999999999},
 	])
@@ -144,7 +144,7 @@ func _test_ban_feed_parsing() -> void:
 		expired.ok and str((expired.value as Array)[0]["uid"]) == "current")
 
 	_check("something that is not a list is refused",
-		not DotBanFeeds.parse_payload(feed, 42).ok)
+		not GSBanFeeds.parse_payload(feed, 42).ok)
 	_done()
 
 
@@ -152,39 +152,39 @@ func _test_ban_feed_auth() -> void:
 	print("")
 	_section("[ban feed authentication]")
 
-	var feed := DotBanFeed.of(&"auth", "https://example.org/list")
+	var feed := GSBanFeed.of(&"auth", "https://example.org/list")
 
-	feed.auth = DotBanFeed.Auth.NONE
+	feed.auth = GSBanFeed.Auth.NONE
 	_check("a public feed sends no credential",
 		not feed.headers().has("Authorization"))
 
-	feed.auth = DotBanFeed.Auth.BEARER
+	feed.auth = GSBanFeed.Auth.BEARER
 	feed.token = "a-jwt-or-an-api-key"
 	_check("a bearer token is a bearer header",
 		str(feed.headers()["Authorization"]) == "Bearer a-jwt-or-an-api-key")
 
-	feed.auth = DotBanFeed.Auth.BASIC
+	feed.auth = GSBanFeed.Auth.BASIC
 	feed.username = "user"
 	feed.token = "pass"
 	_check("basic auth is base64 of user:pass",
 		str(feed.headers()["Authorization"])
 			== "Basic " + Marshalls.utf8_to_base64("user:pass"))
 
-	feed.auth = DotBanFeed.Auth.HEADER
+	feed.auth = GSBanFeed.Auth.HEADER
 	feed.header_name = "X-Api-Key"
 	feed.token = "k"
 	_check("a custom header carries the key",
 		str(feed.headers()["X-Api-Key"]) == "k")
 
-	feed.auth = DotBanFeed.Auth.QUERY
+	feed.auth = GSBanFeed.Auth.QUERY
 	feed.query_name = "key"
 	feed.token = "q"
 	_check("a query credential reaches the url",
 		feed.effective_url().contains("key=q"))
 	_check("and is appended correctly to a url with a query",
-		DotBanFeed.parse_auth("query") == DotBanFeed.Auth.QUERY)
+		GSBanFeed.parse_auth("query") == GSBanFeed.Auth.QUERY)
 
-	feed.auth = DotBanFeed.Auth.HMAC
+	feed.auth = GSBanFeed.Auth.HMAC
 	feed.token = "secret"
 	var signed := feed.headers()
 	_check("hmac sends a timestamp", signed.has("X-Dot-Timestamp"))
@@ -196,23 +196,23 @@ func _test_ban_feed_auth() -> void:
 	# The token is a secret and must not be reachable from the environment or
 	# argv, both of which are readable by other processes and end up in `ps`.
 	_check("the token is marked sensitive",
-		DotBanFeed.sensitive_keys().has("token"))
+		GSBanFeed.sensitive_keys().has("token"))
 
-	var insecure := DotBanFeed.of(&"i", "http://example.org/list")
+	var insecure := GSBanFeed.of(&"i", "http://example.org/list")
 	_check("plain http is refused", not insecure.validate().ok)
 	insecure.allow_insecure = true
 	_check("...unless explicitly allowed", insecure.validate().ok)
 
-	var no_token := DotBanFeed.of(&"n", "https://example.org/list")
-	no_token.auth = DotBanFeed.Auth.BEARER
+	var no_token := GSBanFeed.of(&"n", "https://example.org/list")
+	no_token.auth = GSBanFeed.Auth.BEARER
 	_check("a feed needing a credential and having none is refused at boot",
 		not no_token.validate().ok)
 
 	_check("jwt is accepted as a spelling of bearer",
-		DotBanFeed.parse_auth("jwt") == DotBanFeed.Auth.BEARER)
+		GSBanFeed.parse_auth("jwt") == GSBanFeed.Auth.BEARER)
 	_check("fail_closed is accepted as a spelling of refuse_all",
-		DotBanFeed.parse_failure("fail_closed")
-			== DotBanFeed.OnFailure.REFUSE_ALL)
+		GSBanFeed.parse_failure("fail_closed")
+			== GSBanFeed.OnFailure.REFUSE_ALL)
 	_done()
 
 
@@ -224,9 +224,9 @@ func _test_ban_feed_admission() -> void:
 	# find. Two ban sources with neither knowing about the other is a
 	# deployment enforcing exactly one of them.
 	var upstream := StubBanSource.new()
-	DotRegistry.register(DotBanFeeds.BAN_SOURCE, upstream)
+	GSRegistry.register(GSBanFeeds.BAN_SOURCE, upstream)
 
-	feeds = DotBanFeeds.new()
+	feeds = GSBanFeeds.new()
 	feeds.name = "BanFeeds"
 	feeds.feeds_file = ""
 	feeds.fetch_on_ready = false
@@ -234,7 +234,7 @@ func _test_ban_feed_admission() -> void:
 	await get_tree().process_frame
 
 	_check("it registered as the ban source",
-		DotRegistry.get_service(DotBanFeeds.BAN_SOURCE) == feeds)
+		GSRegistry.get_service(GSBanFeeds.BAN_SOURCE) == feeds)
 	_check("and chained to what was there before",
 		feeds.previous_source == upstream)
 
@@ -269,10 +269,10 @@ func _test_ban_feed_admission() -> void:
 	# under the same name, and the registry is last-wins. Captured once at _ready,
 	# the feeds were displaced from every admission after the first level change.
 	var late := StubBanSource.new()
-	DotRegistry.register(DotBanFeeds.BAN_SOURCE, late)
+	GSRegistry.register(GSBanFeeds.BAN_SOURCE, late)
 	await get_tree().process_frame
 	_check("a source registered later does not displace the feeds",
-		DotRegistry.get_service(DotBanFeeds.BAN_SOURCE) == feeds)
+		GSRegistry.get_service(GSBanFeeds.BAN_SOURCE) == feeds)
 	_check("the feeds chain onto the newcomer",
 		feeds.previous_source == late)
 	late.refuse = "banned-late"
@@ -282,21 +282,21 @@ func _test_ban_feed_admission() -> void:
 
 	# The module unloading takes its registration with it; the feeds take the seam
 	# back rather than leaving it empty while the next game loads.
-	DotRegistry.unregister_instance(DotBanFeeds.BAN_SOURCE, feeds)
+	GSRegistry.unregister_instance(GSBanFeeds.BAN_SOURCE, feeds)
 	await get_tree().process_frame
 	_check("an emptied seam is taken back",
-		DotRegistry.get_service(DotBanFeeds.BAN_SOURCE) == feeds)
+		GSRegistry.get_service(GSBanFeeds.BAN_SOURCE) == feeds)
 
 	# Something that already chains to the feeds (the booking seam does) is left on
 	# top: going over it again would make the chain a loop.
 	var wrapper := StubBanSource.new()
 	wrapper.previous_source = feeds
-	DotRegistry.register(DotBanFeeds.BAN_SOURCE, wrapper)
+	GSRegistry.register(GSBanFeeds.BAN_SOURCE, wrapper)
 	await get_tree().process_frame
 	_check("a source that already chains to the feeds keeps the seam",
-		DotRegistry.get_service(DotBanFeeds.BAN_SOURCE) == wrapper
+		GSRegistry.get_service(GSBanFeeds.BAN_SOURCE) == wrapper
 			and feeds.previous_source != wrapper)
-	DotRegistry.register(DotBanFeeds.BAN_SOURCE, feeds)
+	GSRegistry.register(GSBanFeeds.BAN_SOURCE, feeds)
 	_done()
 
 
@@ -309,26 +309,26 @@ func _test_anticheat() -> void:
 
 	# The split that the whole design rests on.
 	_check("speed is proof",
-		DotAntiCheatEvent.is_impossible(DotAntiCheatEvent.SPEED))
+		GSAntiCheatEvent.is_impossible(GSAntiCheatEvent.SPEED))
 	_check("aim analysis is not",
-		DotAntiCheatEvent.is_suspicious(DotAntiCheatEvent.AIM_SNAP))
+		GSAntiCheatEvent.is_suspicious(GSAntiCheatEvent.AIM_SNAP))
 	_check("a single impossible event may be acted on",
-		DotAntiCheatEvent.may_act_on_one(DotAntiCheatEvent.TIMING))
+		GSAntiCheatEvent.may_act_on_one(GSAntiCheatEvent.TIMING))
 	_check("a single behavioural one may not",
-		not DotAntiCheatEvent.may_act_on_one(DotAntiCheatEvent.TRIGGERBOT))
+		not GSAntiCheatEvent.may_act_on_one(GSAntiCheatEvent.TRIGGERBOT))
 
-	var rule := _rule(&"t_speed", DotAntiCheatEvent.SPEED, 1)
+	var rule := _rule(&"t_speed", GSAntiCheatEvent.SPEED, 1)
 	guard.policy.add(rule)
 	guard._reindex()
 
-	var session := DotClientSession.new()
+	var session := GSClientSession.new()
 	session.peer_id = 700
 	session.userid = 700
 	session.address = "203.0.113.70"
 	session.display_name = "Runner"
 
-	var subject := DotSecuritySubject.of_session(
-		session, DotSecuritySubject.Scope.UID
+	var subject := GSSecuritySubject.of_session(
+		session, GSSecuritySubject.Scope.UID
 	)
 
 	anticheat.observe_move(session, Vector3.ZERO, Vector3(10, 0, 0), true, 0.1)
@@ -347,16 +347,16 @@ func _test_anticheat() -> void:
 	# The reference simulation is the check that cannot be argued with: the
 	# server re-runs the movement and compares.
 	anticheat.movement_reference = func(
-		_s: DotClientSession, from: Vector3, _v: Vector3, _c: Variant, _d: float
+		_s: GSClientSession, from: Vector3, _v: Vector3, _c: Variant, _d: float
 	) -> Vector3:
 		return from
 
-	var honest := DotClientSession.new()
+	var honest := GSClientSession.new()
 	honest.peer_id = 701
 	honest.userid = 701
 	honest.address = "203.0.113.71"
-	var honest_subject := DotSecuritySubject.of_session(
-		honest, DotSecuritySubject.Scope.UID
+	var honest_subject := GSSecuritySubject.of_session(
+		honest, GSSecuritySubject.Scope.UID
 	)
 
 	anticheat.observe_move(honest, Vector3.ZERO, Vector3.ZERO, true, 0.1)
@@ -370,15 +370,15 @@ func _test_anticheat() -> void:
 	anticheat.movement_reference = Callable()
 
 	# Fire rate is arithmetic against the weapon's own cycle time.
-	var shooter := DotClientSession.new()
+	var shooter := GSClientSession.new()
 	shooter.peer_id = 702
 	shooter.userid = 702
 	shooter.address = "203.0.113.72"
-	var shooter_subject := DotSecuritySubject.of_session(
-		shooter, DotSecuritySubject.Scope.UID
+	var shooter_subject := GSSecuritySubject.of_session(
+		shooter, GSSecuritySubject.Scope.UID
 	)
 
-	guard.policy.add(_rule(&"t_fire", DotAntiCheatEvent.FIRE_RATE, 1))
+	guard.policy.add(_rule(&"t_fire", GSAntiCheatEvent.FIRE_RATE, 1))
 	guard._reindex()
 
 	anticheat.observe_shot(shooter, &"rifle", 1.0)
@@ -389,15 +389,15 @@ func _test_anticheat() -> void:
 	# Its own dry run, separate from the guard's: an operator trusts chat rules
 	# long before a movement threshold they have not measured.
 	anticheat.config.dry_run = true
-	var quiet := DotClientSession.new()
+	var quiet := GSClientSession.new()
 	quiet.peer_id = 703
 	quiet.userid = 703
 	quiet.address = "203.0.113.73"
 	anticheat.observe_move(quiet, Vector3.ZERO, Vector3(999, 0, 0), true, 0.1)
 	anticheat.observe_move(quiet, Vector3(9, 0, 0), Vector3(999, 0, 0), true, 0.1)
 	_check("anti-cheat dry run reports nothing to the rules",
-		guard.ledger.for_subject(DotSecuritySubject.of_session(
-			quiet, DotSecuritySubject.Scope.UID)).is_empty())
+		guard.ledger.for_subject(GSSecuritySubject.of_session(
+			quiet, GSSecuritySubject.Scope.UID)).is_empty())
 
 	# Dry run is the path that logs a detection's detail, and some of that detail
 	# is the client's own words: its build string. The log line an admin reads to
@@ -406,13 +406,13 @@ func _test_anticheat() -> void:
 	anticheat.config.accepted_build_hashes = PackedStringArray(["build-ok"])
 	var logged: Array[String] = []
 	var listen := func(rec: Dictionary) -> void:
-		if str(rec.get("channel", "")) == DotAntiCheat.CHANNEL:
-			logged.append(DotLog.format_line(rec))
-	DotLog.signals().record.connect(listen)
+		if str(rec.get("channel", "")) == GSAntiCheat.CHANNEL:
+			logged.append(GSLog.format_line(rec))
+	GSLog.signals().record.connect(listen)
 	anticheat.observe_build(
 		quiet, "evil\ninf security rule tripped rule=forged " + "x".repeat(4000)
 	)
-	DotLog.signals().record.disconnect(listen)
+	GSLog.signals().record.disconnect(listen)
 	anticheat.config.accepted_build_hashes = saved_hashes
 	_check("a client's build string cannot forge a log line",
 		logged.size() == 1 and not logged[0].contains("\n"))
@@ -421,20 +421,20 @@ func _test_anticheat() -> void:
 	anticheat.config.dry_run = false
 
 	# The refusal that stops an operator banning a good player on one signal.
-	var reckless := DotSecurityRule.of(
-		&"t_reckless", DotAntiCheatEvent.AIM_SNAP, 1, 60.0
+	var reckless := GSSecurityRule.of(
+		&"t_reckless", GSAntiCheatEvent.AIM_SNAP, 1, 60.0
 	)
-	reckless.steps = [DotSecurityStep.of(DotSecurityAction.Kind.BAN, 0)]
+	reckless.steps = [GSSecurityStep.of(GSSecurityAction.Kind.BAN, 0)]
 	guard.policy.add(reckless)
 	guard._reindex()
 	anticheat._audit_rules()
 	_check("a rule banning on one behavioural signal is refused",
 		not guard.policy.find(&"t_reckless").enabled)
 
-	var sane := DotSecurityRule.of(
-		&"t_sane", DotAntiCheatEvent.AIM_SNAP, 20, 300.0
+	var sane := GSSecurityRule.of(
+		&"t_sane", GSAntiCheatEvent.AIM_SNAP, 20, 300.0
 	)
-	sane.steps = [DotSecurityStep.of(DotSecurityAction.Kind.WARN)]
+	sane.steps = [GSSecurityStep.of(GSSecurityAction.Kind.WARN)]
 	guard.policy.add(sane)
 	guard._reindex()
 	anticheat._audit_rules()
@@ -442,15 +442,15 @@ func _test_anticheat() -> void:
 		guard.policy.find(&"t_sane").enabled)
 
 	# Every shipped behavioural rule must obey the same standard.
-	var shipped := DotSecurityPolicy.defaults()
+	var shipped := GSSecurityPolicy.defaults()
 	var offenders := PackedStringArray()
 	for r in shipped.enabled_rules():
-		if not DotAntiCheatEvent.is_suspicious(r.event):
+		if not GSAntiCheatEvent.is_suspicious(r.event):
 			continue
 		for step in (r.steps if not r.steps.is_empty()
-				else [DotSecurityStep.of(r.action, r.duration_sec)]):
-			if step.action != DotSecurityAction.Kind.WARN \
-					and step.action != DotSecurityAction.Kind.NONE:
+				else [GSSecurityStep.of(r.action, r.duration_sec)]):
+			if step.action != GSSecurityAction.Kind.WARN \
+					and step.action != GSSecurityAction.Kind.NONE:
 				offenders.append(String(r.id))
 	_check("no shipped behavioural rule ever punishes",
 		offenders.is_empty())
@@ -464,14 +464,14 @@ func _test_without_moderation() -> void:
 
 	# The promise of the fallback: with no GameSpice Moderation a gag is still felt, it just does not survive a reconnect.
 	# Refusing to act without it would make this addon conditional on another optional one.
-	var session := DotClientSession.new()
+	var session := GSClientSession.new()
 	session.peer_id = 800
 	session.userid = 800
 	session.address = "203.0.113.80"
 	session.display_name = "Nobody"
 
-	var gagged := DotSecurityAction.apply(
-		DotSecurityAction.Kind.GAG, "uid:fallback", 120, "test", "suite",
+	var gagged := GSSecurityAction.apply(
+		GSSecurityAction.Kind.GAG, "uid:fallback", 120, "test", "suite",
 		null, server, session
 	)
 	_check("a gag applies with no store at all", gagged.ok)
@@ -481,38 +481,38 @@ func _test_without_moderation() -> void:
 		str(gagged.value).contains("session only"))
 
 	session.unsilence()
-	var silenced := DotSecurityAction.apply(
-		DotSecurityAction.Kind.SILENCE, "uid:fallback", 60, "test", "suite",
+	var silenced := GSSecurityAction.apply(
+		GSSecurityAction.Kind.SILENCE, "uid:fallback", 60, "test", "suite",
 		null, server, session
 	)
 	_check("silence covers both", silenced.ok and session.gagged and session.muted)
 
 	# With nothing to act on and nothing to record, it fails rather than
 	# claiming success — an action that quietly did nothing is the worst answer.
-	var nothing := DotSecurityAction.apply(
-		DotSecurityAction.Kind.GAG, "uid:absent", 60, "test", "suite",
+	var nothing := GSSecurityAction.apply(
+		GSSecurityAction.Kind.GAG, "uid:absent", 60, "test", "suite",
 		null, server, null
 	)
 	_check("no store and no session is an honest failure", not nothing.ok)
 
 	# Loopback is never acted on, however a rule is written, and that is not an
 	# error: the first thing a guard must not do is lock the operator out.
-	var loopback := DotSecurityAction.apply(
-		DotSecurityAction.Kind.BAN, "ip:127.0.0.1", 0, "test", "suite",
+	var loopback := GSSecurityAction.apply(
+		GSSecurityAction.Kind.BAN, "ip:127.0.0.1", 0, "test", "suite",
 		null, server, null
 	)
 	_check("loopback is refused as a no-op, not as a failure",
 		loopback.ok and str(loopback.value).contains("exempt"))
 
 	# ...and with the real store present, the same call records durably.
-	var mod := DotRegistry.get_service(&"dot_moderation")
+	var mod := GSRegistry.get_service(&"dot_moderation")
 	_check("the real moderation store is installed for this suite", mod != null)
 
 	if mod == null:
 		return
 
-	var durable := DotSecurityAction.apply(
-		DotSecurityAction.Kind.GAG, "uid:durable-test", 60, "auto", "suite",
+	var durable := GSSecurityAction.apply(
+		GSSecurityAction.Kind.GAG, "uid:durable-test", 60, "auto", "suite",
 		mod, server, null
 	)
 	_check("with a store, it records with no session at all", durable.ok)
@@ -574,7 +574,7 @@ class StubBanSource extends RefCounted:
 	var refuse: String = ""
 	var previous_source: Object = null
 
-	func check_admission(uid: String, _address: String) -> DotResult:
+	func check_admission(uid: String, _address: String) -> GSResult:
 		if refuse != "" and uid == refuse:
-			return DotResult.fail(DotError.CODE_FORBIDDEN, "Refused upstream.")
-		return DotResult.success(true)
+			return GSResult.fail(GSError.CODE_FORBIDDEN, "Refused upstream.")
+		return GSResult.success(true)

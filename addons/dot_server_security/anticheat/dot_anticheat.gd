@@ -1,8 +1,8 @@
 @tool
-class_name DotAntiCheat
+class_name GSAntiCheat
 extends Node
 
-## Server-side detectors, reporting into the same rule engine as everything else: a detection is a [DotSecurityEvent], so windows, ladders, exemptions and dry run apply unchanged.
+## Server-side detectors, reporting into the same rule engine as everything else: a detection is a [GSSecurityEvent], so windows, ladders, exemptions and dry run apply unchanged.
 ## There is no client-side component; wallhacks are stopped by interest management in the netcode, not detection (docs/anticheat.md).
 
 const CHANNEL := "anticheat"
@@ -13,16 +13,16 @@ const LOGGED_STRING_MAX := 96
 
 ## A detector fired. [param impossible] separates proof from suspicion.
 signal detected(
-	session: DotClientSession, kind: StringName, impossible: bool, detail: Dictionary
+	session: GSClientSession, kind: StringName, impossible: bool, detail: Dictionary
 )
 
 @export_group("Wiring")
 
-@export var guard_ref: DotNodeRef = null
+@export var guard_ref: GSNodeRef = null
 
 @export_group("Configuration")
 
-@export var config: DotAntiCheatConfig = null
+@export var config: GSAntiCheatConfig = null
 
 @export var config_file: String = "user://cfg/anticheat.json"
 
@@ -32,7 +32,7 @@ signal detected(
 ## Signature: [code]func(session, from_position, from_velocity, command, delta) -> Vector3[/code], the position the server believes in.
 @export var movement_reference: Callable = Callable()
 
-var guard: DotSecurityManager = null
+var guard: GSSecurityManager = null
 
 ## peer -> tracking state
 var _tracks: Dictionary = {}
@@ -50,7 +50,7 @@ func _ready() -> void:
 		return
 
 	if config == null:
-		config = DotAntiCheatConfig.new()
+		config = GSAntiCheatConfig.new()
 
 	if config_file != "":
 		config.apply_json_file(config_file)
@@ -60,28 +60,28 @@ func _ready() -> void:
 
 	var valid := config.validate()
 	if not valid.ok:
-		DotLog.error(
+		GSLog.error(
 			CHANNEL, "the anti-cheat config is wrong", {"detail": valid.error.message}
 		)
 		return
 
 	if guard_ref == null:
-		guard_ref = DotNodeRef.of_service(DotSecurityManager.SERVICE)
+		guard_ref = GSNodeRef.of_service(GSSecurityManager.SERVICE)
 
-	if guard_ref.mode == DotNodeRef.Mode.REGISTRY \
-			and DotRegistry.get_service(guard_ref.service) == null:
-		var waited := await DotRegistry.await_service(guard_ref.service, 10.0)
+	if guard_ref.mode == GSNodeRef.Mode.REGISTRY \
+			and GSRegistry.get_service(guard_ref.service) == null:
+		var waited := await GSRegistry.await_service(guard_ref.service, 10.0)
 		if not waited.ok:
-			DotLog.warn(CHANNEL, "no security manager: detections go nowhere")
+			GSLog.warn(CHANNEL, "no security manager: detections go nowhere")
 			return
 
-	guard = guard_ref.resolve_or_null(self, CHANNEL) as DotSecurityManager
-	DotRegistry.register(SERVICE, self)
+	guard = guard_ref.resolve_or_null(self, CHANNEL) as GSSecurityManager
+	GSRegistry.register(SERVICE, self)
 
 	if guard != null:
 		_audit_rules()
 
-	DotLog.info(
+	GSLog.info(
 		CHANNEL,
 		"detectors up",
 		{
@@ -94,7 +94,7 @@ func _ready() -> void:
 	if not movement_reference.is_valid() and config.max_horizontal_speed <= 0.0:
 		# Both halves off is a legitimate first-week configuration and an easy
 		# thing to leave that way by accident, so it is named rather than silent.
-		DotLog.info(
+		GSLog.info(
 			CHANNEL,
 			"movement is not being checked: set a reference simulator, or "
 			+ "measure max_horizontal_speed from sec_ac_status"
@@ -102,7 +102,7 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
-	DotRegistry.unregister_instance(SERVICE, self)
+	GSRegistry.unregister_instance(SERVICE, self)
 
 
 ## Refuses a rule that would act on one behavioural signal, which eventually bans a good player unnoticed.
@@ -112,16 +112,16 @@ func _audit_rules() -> void:
 		return
 
 	for rule in guard.policy.enabled_rules():
-		if not DotAntiCheatEvent.is_suspicious(rule.event):
+		if not GSAntiCheatEvent.is_suspicious(rule.event):
 			continue
 		if rule.threshold > 1:
 			continue
-		if rule.step_for(1).action == DotSecurityAction.Kind.NONE \
-				or rule.step_for(1).action == DotSecurityAction.Kind.WARN:
+		if rule.step_for(1).action == GSSecurityAction.Kind.NONE \
+				or rule.step_for(1).action == GSSecurityAction.Kind.WARN:
 			continue
 
 		rule.enabled = false
-		DotLog.error(
+		GSLog.error(
 			CHANNEL,
 			"rule '%s' would punish a single behavioural detection and has been "
 				% rule.id + "disabled",
@@ -137,7 +137,7 @@ func _audit_rules() -> void:
 ## One simulated tick of a player's movement.
 ## [param command] is the controller's input, passed straight back to [member movement_reference] and otherwise unread.
 func observe_move(
-	session: DotClientSession,
+	session: GSClientSession,
 	position: Vector3,
 	velocity: Vector3,
 	on_ground: bool,
@@ -167,7 +167,7 @@ func observe_move(
 			var drift := (position - (expected as Vector3)).length()
 			if drift > config.reference_tolerance_m:
 				_report(
-					session, DotAntiCheatEvent.SPEED, drift, {
+					session, GSAntiCheatEvent.SPEED, drift, {
 						"drift_m": drift,
 						"tolerance_m": config.reference_tolerance_m,
 					}
@@ -181,12 +181,12 @@ func observe_move(
 
 	if config.max_horizontal_speed > 0.0 \
 			and horizontal > config.max_horizontal_speed:
-		_report(session, DotAntiCheatEvent.SPEED, horizontal, {
+		_report(session, GSAntiCheatEvent.SPEED, horizontal, {
 			"speed": horizontal, "limit": config.max_horizontal_speed
 		})
 
 	if config.max_vertical_speed > 0.0 and velocity.y > config.max_vertical_speed:
-		_report(session, DotAntiCheatEvent.FLY, velocity.y, {
+		_report(session, GSAntiCheatEvent.FLY, velocity.y, {
 			"rise": velocity.y, "limit": config.max_vertical_speed
 		})
 
@@ -195,7 +195,7 @@ func observe_move(
 		_peak_tick_distance = maxf(_peak_tick_distance, moved)
 
 		if config.max_tick_distance > 0.0 and moved > config.max_tick_distance:
-			_report(session, DotAntiCheatEvent.TELEPORT, moved, {
+			_report(session, GSAntiCheatEvent.TELEPORT, moved, {
 				"metres": moved, "limit": config.max_tick_distance
 			})
 
@@ -206,7 +206,7 @@ func observe_move(
 		if config.max_airborne_sec > 0.0 \
 				and float(track["airborne_sec"]) > config.max_airborne_sec:
 			_report(
-				session, DotAntiCheatEvent.FLY, float(track["airborne_sec"]),
+				session, GSAntiCheatEvent.FLY, float(track["airborne_sec"]),
 				{"airborne_sec": track["airborne_sec"]}
 			)
 			# Reset, or every subsequent tick of one long jump reports again and
@@ -217,7 +217,7 @@ func observe_move(
 ## One command from a client, for the timing check.
 ## [param client_delta] is the simulated time the client claims; more than has elapsed is the shape of both a speed hack and a timer cheat.
 func observe_command(
-	session: DotClientSession, client_delta: float, sequence: int = -1
+	session: GSClientSession, client_delta: float, sequence: int = -1
 ) -> void:
 	if not _running() or not config.watch_timing or session == null:
 		return
@@ -230,7 +230,7 @@ func observe_command(
 		if last_seq >= 0 and sequence <= last_seq:
 			# Repeated or reordered. Some of this is ordinary packet loss, which
 			# is why it is an event to be counted rather than acted on directly.
-			_report(session, DotAntiCheatEvent.COMMAND_SEQUENCE, 1.0, {
+			_report(session, GSAntiCheatEvent.COMMAND_SEQUENCE, 1.0, {
 				"got": sequence, "last": last_seq
 			})
 		track["sequence"] = sequence
@@ -250,7 +250,7 @@ func observe_command(
 	_peak_time_ratio = maxf(_peak_time_ratio, ratio)
 
 	if ratio > config.max_time_ratio:
-		_report(session, DotAntiCheatEvent.TIMING, ratio, {
+		_report(session, GSAntiCheatEvent.TIMING, ratio, {
 			"ratio": ratio, "limit": config.max_time_ratio
 		})
 
@@ -260,7 +260,7 @@ func observe_command(
 
 ## One shot. [param cycle_time_sec] is what the weapon says it allows.
 func observe_shot(
-	session: DotClientSession,
+	session: GSClientSession,
 	weapon_id: StringName = &"",
 	cycle_time_sec: float = 0.0
 ) -> void:
@@ -282,7 +282,7 @@ func observe_shot(
 	var allowed := cycle_time_sec * config.fire_interval_tolerance
 
 	if interval < allowed:
-		_report(session, DotAntiCheatEvent.FIRE_RATE, 1.0, {
+		_report(session, GSAntiCheatEvent.FIRE_RATE, 1.0, {
 			"interval_sec": interval,
 			"weapon": String(weapon_id),
 			"allowed_sec": allowed,
@@ -291,7 +291,7 @@ func observe_shot(
 
 ## One hit, for the reach check. Distances in metres.
 func observe_hit(
-	session: DotClientSession,
+	session: GSClientSession,
 	distance_m: float,
 	weapon_range_m: float,
 	headshot: bool = false
@@ -306,7 +306,7 @@ func observe_hit(
 
 	if weapon_range_m > 0.0 \
 			and distance_m > weapon_range_m + config.reach_tolerance_m:
-		_report(session, DotAntiCheatEvent.REACH, distance_m, {
+		_report(session, GSAntiCheatEvent.REACH, distance_m, {
 			"distance_m": distance_m, "range_m": weapon_range_m
 		})
 
@@ -316,7 +316,7 @@ func observe_hit(
 ## A view-angle change, for the aim detectors. Degrees.
 ## [param to_target_degrees] is the angle to the nearest enemy; pass a large number when none, since a fast turn onto nothing is just looking around.
 func observe_aim(
-	session: DotClientSession,
+	session: GSClientSession,
 	delta_degrees: float,
 	to_target_degrees: float,
 	_delta: float
@@ -326,7 +326,7 @@ func observe_aim(
 
 	if delta_degrees >= config.snap_degrees \
 			and to_target_degrees <= config.snap_on_target_degrees:
-		_report(session, DotAntiCheatEvent.AIM_SNAP, 1.0, {
+		_report(session, GSAntiCheatEvent.AIM_SNAP, 1.0, {
 			"degrees": delta_degrees, "off_target": to_target_degrees
 		})
 
@@ -340,7 +340,7 @@ func observe_aim(
 
 
 ## Called when a shot is fired, to judge how long the crosshair had been on target.
-func observe_trigger(session: DotClientSession) -> void:
+func observe_trigger(session: GSClientSession) -> void:
 	if not _running() or not config.watch_aim or session == null:
 		return
 
@@ -352,20 +352,20 @@ func observe_trigger(session: DotClientSession) -> void:
 
 	var reaction := float(Time.get_ticks_msec() - since)
 	if reaction <= config.trigger_reaction_ms:
-		_report(session, DotAntiCheatEvent.TRIGGERBOT, 1.0, {
+		_report(session, GSAntiCheatEvent.TRIGGERBOT, 1.0, {
 			"reaction_ms": reaction, "limit_ms": config.trigger_reaction_ms
 		})
 
 
 ## What the client says it is running.
-func observe_build(session: DotClientSession, build_hash: String) -> void:
+func observe_build(session: GSClientSession, build_hash: String) -> void:
 	if not _running() or not config.watch_integrity or session == null:
 		return
 	if config.accepted_build_hashes.is_empty():
 		return
 
 	if not config.accepted_build_hashes.has(build_hash):
-		_report(session, DotAntiCheatEvent.INTEGRITY, 1.0, {
+		_report(session, GSAntiCheatEvent.INTEGRITY, 1.0, {
 			"reported": build_hash
 		})
 
@@ -387,7 +387,7 @@ static func _loggable(detail: Dictionary) -> Dictionary:
 	return out
 
 
-func _check_headshot_ratio(session: DotClientSession, track: Dictionary) -> void:
+func _check_headshot_ratio(session: GSClientSession, track: Dictionary) -> void:
 	var shots := int(track["shots"])
 	if shots < config.headshot_min_shots:
 		return
@@ -396,7 +396,7 @@ func _check_headshot_ratio(session: DotClientSession, track: Dictionary) -> void
 	if ratio < config.headshot_ratio:
 		return
 
-	_report(session, DotAntiCheatEvent.HEADSHOT_RATIO, 1.0, {
+	_report(session, GSAntiCheatEvent.HEADSHOT_RATIO, 1.0, {
 		"ratio": ratio, "shots": shots
 	})
 
@@ -416,26 +416,26 @@ func _running() -> bool:
 
 
 func _report(
-	session: DotClientSession,
+	session: GSClientSession,
 	kind: StringName,
 	magnitude: float,
 	detail: Dictionary
 ) -> void:
 	_detections[kind] = int(_detections.get(kind, 0)) + 1
 
-	var impossible := DotAntiCheatEvent.is_impossible(kind)
+	var impossible := GSAntiCheatEvent.is_impossible(kind)
 	detected.emit(session, kind, impossible, detail)
 
 	if config.dry_run:
 		# Logged and counted, never reported into the rule engine, so no rule can act on it.
 		# Separate from the guard's dry run: operators trust chat rules long before an unmeasured movement threshold.
-		DotLog.info(CHANNEL, "would report %s" % kind, _loggable(detail))
+		GSLog.info(CHANNEL, "would report %s" % kind, _loggable(detail))
 		return
 
 	guard.report_session(kind, session, magnitude, detail)
 
 
-func _track(session: DotClientSession) -> Dictionary:
+func _track(session: GSClientSession) -> Dictionary:
 	var key := session.peer_id
 
 	if not _tracks.has(key):
@@ -457,7 +457,7 @@ func _track(session: DotClientSession) -> Dictionary:
 
 
 ## Drops a player's tracking state. Call on disconnect, or peers leak.
-func forget(session: DotClientSession) -> void:
+func forget(session: GSClientSession) -> void:
 	if session != null:
 		_tracks.erase(session.peer_id)
 
@@ -527,7 +527,7 @@ func describe_lines() -> PackedStringArray:
 	for kind in _detections:
 		out.append("  %-32s %d%s" % [
 			String(kind), int(_detections[kind]),
-			"" if DotAntiCheatEvent.is_impossible(kind) else "   (behavioural)"
+			"" if GSAntiCheatEvent.is_impossible(kind) else "   (behavioural)"
 		])
 
 	return out

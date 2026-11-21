@@ -1,5 +1,5 @@
 @tool
-class_name DotBanFeeds
+class_name GSBanFeeds
 extends Node
 
 ## Fetches external ban lists, merges them, and refuses the people on them. Registers as [code]dot_ban_source[/code], the seam GameSpice Server already asks on every admission.
@@ -12,7 +12,7 @@ const SERVICE := &"dot_security_bans"
 const BAN_SOURCE := &"dot_ban_source"
 
 ## A fetch finished, for good or ill.
-signal fetched(feed_id: StringName, result: DotResult, entries: int)
+signal fetched(feed_id: StringName, result: GSResult, entries: int)
 
 ## The merged list changed.
 signal list_changed(total: int)
@@ -20,7 +20,7 @@ signal list_changed(total: int)
 @export_group("Feeds")
 
 ## The endpoints. Any number; each has its own credential and refresh rate.
-@export var feeds: Array[DotBanFeed] = []
+@export var feeds: Array[GSBanFeed] = []
 
 ## JSON file of feeds, layered over [member feeds]. The operator's surface.
 @export var feeds_file: String = "user://cfg/ban_feeds.json"
@@ -38,7 +38,7 @@ signal list_changed(total: int)
 ## The reason comes from somebody else's list and is shown to the person it is about; turn off if upstream reasons should not be quoted.
 @export var show_upstream_reason: bool = true
 
-var index := DotBanIndex.new()
+var index := GSBanIndex.new()
 
 ## Whatever held `dot_ban_source` before this node did. Duck-typed; never named.
 var previous_source: Object = null
@@ -46,7 +46,7 @@ var previous_source: Object = null
 ## feed id -> Array of {uid, address, reason}, as last fetched or cached.
 var _entries: Dictionary = {}
 
-var _http: DotHttp = null
+var _http: GSHttp = null
 var _timers: Dictionary = {}
 var _last_ok: Dictionary = {}
 var _stale: Dictionary = {}
@@ -60,31 +60,31 @@ func _ready() -> void:
 
 	_load_feeds_file()
 
-	_http = DotHttp.new()
+	_http = GSHttp.new()
 	_http.name = "BanFeedHttp"
 	add_child(_http)
 
 	# Captured BEFORE registering, or this node finds itself and every admission
 	# check recurses until the stack gives out.
-	var existing := DotRegistry.get_service(BAN_SOURCE)
+	var existing := GSRegistry.get_service(BAN_SOURCE)
 	if chain_previous and existing != null and existing != self \
 			and is_instance_valid(existing) \
 			and existing.has_method("check_admission"):
 		previous_source = existing
-		DotLog.info(
+		GSLog.info(
 			CHANNEL,
 			"chaining to the ban source that was already registered",
 			{"was": existing.get_class()}
 		)
 
-	DotRegistry.register(SERVICE, self)
-	DotRegistry.register(BAN_SOURCE, self)
+	GSRegistry.register(SERVICE, self)
+	GSRegistry.register(BAN_SOURCE, self)
 
 	# Kept on top, not put there once: a game's module re-registers GameSpice Moderation on every changelevel
 	# and the registry is last-wins, so a chain captured once was displaced and the feeds stopped being asked,
 	# with nothing logged above DEBUG.
 	if chain_previous:
-		var bus := DotRegistry.signals()
+		var bus := GSRegistry.signals()
 		if not bus.service_registered.is_connected(_on_service_registered):
 			bus.service_registered.connect(_on_service_registered)
 		if not bus.service_unregistered.is_connected(_on_service_unregistered):
@@ -99,7 +99,7 @@ func _ready() -> void:
 			# Named and skipped rather than fatal. One misconfigured feed must
 			# not take the other three down, and a server that refuses to boot
 			# over a blocklist is a server that is not running at all.
-			DotLog.error(
+			GSLog.error(
 				CHANNEL,
 				"ban feed refused",
 				{"feed": String(feed.id), "detail": valid.error.message}
@@ -118,14 +118,14 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	# Disconnected first, or unregistering below would ask this node to take the seam
 	# back on its way out.
-	var bus := DotRegistry.signals()
+	var bus := GSRegistry.signals()
 	if bus.service_registered.is_connected(_on_service_registered):
 		bus.service_registered.disconnect(_on_service_registered)
 	if bus.service_unregistered.is_connected(_on_service_unregistered):
 		bus.service_unregistered.disconnect(_on_service_unregistered)
 
-	DotRegistry.unregister_instance(SERVICE, self)
-	DotRegistry.unregister_instance(BAN_SOURCE, self)
+	GSRegistry.unregister_instance(SERVICE, self)
+	GSRegistry.unregister_instance(BAN_SOURCE, self)
 
 
 
@@ -148,7 +148,7 @@ func _rechain() -> void:
 	if not is_inside_tree() or not chain_previous:
 		return
 
-	var holder := DotRegistry.get_service(BAN_SOURCE)
+	var holder := GSRegistry.get_service(BAN_SOURCE)
 
 	if holder == self:
 		return
@@ -163,8 +163,8 @@ func _rechain() -> void:
 	elif previous_source != null and not is_instance_valid(previous_source):
 		previous_source = null
 
-	DotRegistry.register(BAN_SOURCE, self)
-	DotLog.debug(CHANNEL, "ban feeds chained back onto the ban seam", {
+	GSRegistry.register(BAN_SOURCE, self)
+	GSLog.debug(CHANNEL, "ban feeds chained back onto the ban seam", {
 		"previous": previous_source.get_class() if previous_source != null else "none",
 	})
 
@@ -188,18 +188,18 @@ static func _chain_reaches(start: Object, target: Object) -> bool:
 
 ## Whether this person may join. The contract behind `dot_ban_source`.
 ## Asked twice per join: address alone before anybody has said who they are, then both.
-func check_admission(uid: String, address: String) -> DotResult:
+func check_admission(uid: String, address: String) -> GSResult:
 	# Anything still fetching for the first time with REFUSE_ALL set fails
 	# closed, which is the whole point of that setting: a deployment that chose
 	# it would rather turn people away than admit somebody its list would block.
 	for feed in feeds:
 		if feed == null or not feed.enabled:
 			continue
-		if feed.on_failure != DotBanFeed.OnFailure.REFUSE_ALL:
+		if feed.on_failure != GSBanFeed.OnFailure.REFUSE_ALL:
 			continue
 		if bool(_stale.get(feed.id, true)):
-			return DotResult.fail(
-				DotError.CODE_STATE,
+			return GSResult.fail(
+				GSError.CODE_STATE,
 				"The server cannot check its ban list right now.",
 				"feed '%s' is stale and set to refuse" % feed.id
 			)
@@ -213,8 +213,8 @@ func check_admission(uid: String, address: String) -> DotResult:
 		reason = index.reason_for_address(address)
 
 	if reason != "":
-		return DotResult.fail(
-			DotError.CODE_FORBIDDEN,
+		return GSResult.fail(
+			GSError.CODE_FORBIDDEN,
 			"You are banned from this server." if not show_upstream_reason
 				else reason,
 			"external ban list"
@@ -222,15 +222,15 @@ func check_admission(uid: String, address: String) -> DotResult:
 
 	if previous_source != null and is_instance_valid(previous_source):
 		var chained: Variant = previous_source.call("check_admission", uid, address)
-		if chained is DotResult:
-			return chained as DotResult
+		if chained is GSResult:
+			return chained as GSResult
 
-	return DotResult.success(true)
+	return GSResult.success(true)
 
 
 
 ## Fetches one feed now. Safe to call at any time; `sec_bans_refresh` does.
-func fetch(feed: DotBanFeed) -> void:
+func fetch(feed: GSBanFeed) -> void:
 	if feed == null or not feed.enabled:
 		return
 
@@ -238,7 +238,7 @@ func fetch(feed: DotBanFeed) -> void:
 	_http.max_retries = feed.max_retries
 	_http.max_response_bytes = feed.max_bytes
 
-	var res: DotResult = await _http.get_json(
+	var res: GSResult = await _http.get_json(
 		feed.effective_url(), feed.headers()
 	)
 
@@ -248,7 +248,7 @@ func fetch(feed: DotBanFeed) -> void:
 		_failures += 1
 		_stale[feed.id] = true
 
-		DotLog.warn(
+		GSLog.warn(
 			CHANNEL,
 			"could not fetch a ban feed",
 			{
@@ -258,7 +258,7 @@ func fetch(feed: DotBanFeed) -> void:
 			}
 		)
 
-		if feed.on_failure == DotBanFeed.OnFailure.IGNORE:
+		if feed.on_failure == GSBanFeed.OnFailure.IGNORE:
 			_entries_of(feed).clear()
 			_rebuild()
 
@@ -270,7 +270,7 @@ func fetch(feed: DotBanFeed) -> void:
 	if not parsed.ok:
 		_failures += 1
 		_stale[feed.id] = true
-		DotLog.warn(
+		GSLog.warn(
 			CHANNEL,
 			"a ban feed answered something unreadable",
 			{"feed": String(feed.id), "detail": parsed.error.message}
@@ -286,7 +286,7 @@ func fetch(feed: DotBanFeed) -> void:
 	_save_cache(feed, entries)
 	_rebuild()
 
-	DotLog.info(
+	GSLog.info(
 		CHANNEL,
 		"ban feed fetched",
 		{"feed": String(feed.id), "entries": entries.size()}
@@ -302,7 +302,7 @@ func fetch_all() -> void:
 			await fetch(feed)
 
 
-func _entries_of(feed: DotBanFeed) -> Array:
+func _entries_of(feed: GSBanFeed) -> Array:
 	if not _entries.has(feed.id):
 		_entries[feed.id] = []
 	return _entries[feed.id]
@@ -311,14 +311,14 @@ func _entries_of(feed: DotBanFeed) -> Array:
 
 ## Turns whatever a service answered into entries. Static, so it is testable.
 ## Accepts the shapes services actually use (bare strings, objects, either wrapped at a path, any of five id field names): a list an operator cannot point this at gets copied by hand, then goes stale.
-static func parse_payload(feed: DotBanFeed, payload: Variant) -> DotResult:
+static func parse_payload(feed: GSBanFeed, payload: Variant) -> GSResult:
 	var list: Variant = payload
 
 	if feed.list_path.strip_edges() != "":
 		for key in feed.list_path.split("."):
 			if not (list is Dictionary) or not (list as Dictionary).has(key):
-				return DotResult.fail(
-					DotError.CODE_PARSE,
+				return GSResult.fail(
+					GSError.CODE_PARSE,
 					"Feed '%s': nothing at '%s'." % [feed.id, feed.list_path]
 				)
 			list = (list as Dictionary)[key]
@@ -335,11 +335,11 @@ static func parse_payload(feed: DotBanFeed, payload: Variant) -> DotResult:
 		if list is Dictionary:
 			var built := _from_split_object(list as Dictionary)
 			if built != null:
-				return DotResult.success(built)
+				return GSResult.success(built)
 
 	if not (list is Array):
-		return DotResult.fail(
-			DotError.CODE_PARSE,
+		return GSResult.fail(
+			GSError.CODE_PARSE,
 			"Feed '%s' did not answer with a list." % feed.id,
 			"set list_path to where the list lives"
 		)
@@ -352,7 +352,7 @@ static func parse_payload(feed: DotBanFeed, payload: Variant) -> DotResult:
 		if not entry.is_empty():
 			out.append(entry)
 
-	return DotResult.success(out)
+	return GSResult.success(out)
 
 
 ## `{"uids": [...], "ips": [...]}` and its spellings.
@@ -375,13 +375,13 @@ static func _from_split_object(dict: Dictionary) -> Variant:
 	return out if matched else null
 
 
-static func _entry_from(feed: DotBanFeed, raw: Variant, now: int) -> Dictionary:
+static func _entry_from(feed: GSBanFeed, raw: Variant, now: int) -> Dictionary:
 	if raw is String:
 		var text := (raw as String).strip_edges()
 		if text == "":
 			return {}
 
-		if feed.guess_bare_strings and DotBanIndex.looks_like_address(text):
+		if feed.guess_bare_strings and GSBanIndex.looks_like_address(text):
 			return {"address": text, "reason": "listed"}
 
 		return {"uid": text, "reason": "listed"}
@@ -453,7 +453,7 @@ func _rebuild() -> void:
 
 
 
-func _load_cache(feed: DotBanFeed) -> void:
+func _load_cache(feed: GSBanFeed) -> void:
 	if feed.cache_path.strip_edges() == "":
 		return
 	if not FileAccess.file_exists(feed.cache_path):
@@ -476,14 +476,14 @@ func _load_cache(feed: DotBanFeed) -> void:
 	_entries[feed.id] = parsed as Array
 	_stale[feed.id] = true
 
-	DotLog.info(
+	GSLog.info(
 		CHANNEL,
 		"ban feed loaded from cache",
 		{"feed": String(feed.id), "entries": (parsed as Array).size()}
 	)
 
 
-func _save_cache(feed: DotBanFeed, entries: Array) -> void:
+func _save_cache(feed: GSBanFeed, entries: Array) -> void:
 	if feed.cache_path.strip_edges() == "":
 		return
 
@@ -497,11 +497,11 @@ func _save_cache(feed: DotBanFeed, entries: Array) -> void:
 
 	file.store_string(JSON.stringify(entries))
 	file.close()
-	DotWeb.sync_filesystem()
+	GSWeb.sync_filesystem()
 
 
 
-func _schedule(feed: DotBanFeed) -> void:
+func _schedule(feed: GSBanFeed) -> void:
 	if feed.refresh_sec <= 0.0:
 		return
 
@@ -529,7 +529,7 @@ func _load_feeds_file() -> void:
 
 	var parsed: Variant = JSON.parse_string(text)
 	if parsed == null or not (parsed is Dictionary):
-		DotLog.error(CHANNEL, "the ban feeds file is not a JSON object")
+		GSLog.error(CHANNEL, "the ban feeds file is not a JSON object")
 		return
 
 	var tree: Dictionary = parsed
@@ -540,14 +540,14 @@ func _load_feeds_file() -> void:
 		if not (raw is Dictionary):
 			continue
 
-		var built := DotBanFeed.from_dictionary(raw as Dictionary)
+		var built := GSBanFeed.from_dictionary(raw as Dictionary)
 		if not built.ok:
-			DotLog.error(
+			GSLog.error(
 				CHANNEL, "ban feed refused", {"detail": built.error.message}
 			)
 			continue
 
-		var feed := built.value as DotBanFeed
+		var feed := built.value as GSBanFeed
 		var existing := find(feed.id)
 
 		if existing != null:
@@ -556,7 +556,7 @@ func _load_feeds_file() -> void:
 			feeds.append(feed)
 
 
-func find(id: StringName) -> DotBanFeed:
+func find(id: StringName) -> GSBanFeed:
 	for feed in feeds:
 		if feed != null and feed.id == id:
 			return feed

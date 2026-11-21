@@ -1,4 +1,4 @@
-class_name DotSecurityWindow
+class_name GSSecurityWindow
 extends RefCounted
 
 ## Sliding-window counters, one per subject, with a hard bound on memory.

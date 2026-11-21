@@ -1,4 +1,4 @@
-class_name DotSecuritySubject
+class_name GSSecuritySubject
 extends RefCounted
 
 ## Who a counter counts against. A peer id dies with the socket, so counting per connection is dodged by reconnecting; the scope is what survives (docs/rationale.md).
@@ -57,7 +57,7 @@ static func normalise_address(address: String) -> String:
 
 ## The subject for a session in one scope. [constant Scope.BOTH] resolves to UID.
 ## BOTH is two subjects, so a caller needing one string gets the more specific account; use [method all_of_session] to mean both.
-static func of_session(session: DotClientSession, scope: int) -> String:
+static func of_session(session: GSClientSession, scope: int) -> String:
 	if session == null:
 		return ""
 
@@ -75,7 +75,7 @@ static func of_session(session: DotClientSession, scope: int) -> String:
 
 
 ## Every subject a session counts under in one scope. One entry, or two for BOTH.
-static func all_of_session(session: DotClientSession, scope: int) -> PackedStringArray:
+static func all_of_session(session: GSClientSession, scope: int) -> PackedStringArray:
 	var out := PackedStringArray()
 	if session == null:
 		return out

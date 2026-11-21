@@ -7,8 +7,8 @@ func _test_attach() -> void:
 	_section("[attach]")
 
 	_check("the guard attached to the server", guard.server == server)
-	_check("it registered itself", DotRegistry.get_service(
-		DotSecurityManager.SERVICE) == guard)
+	_check("it registered itself", GSRegistry.get_service(
+		GSSecurityManager.SERVICE) == guard)
 	_check("the watcher found the guard", watch.guard == guard)
 	_check("the shipped policy loaded", guard.policy.rules.size() > 0)
 	_check("every shipped rule is valid", guard.policy.validate().ok)
@@ -21,7 +21,7 @@ func _test_windows() -> void:
 	print("")
 	_section("[sliding window]")
 
-	var window := DotSecurityWindow.new(60.0)
+	var window := GSSecurityWindow.new(60.0)
 
 	_check("an empty window counts nothing", window.peek("x") == 0.0)
 	_check("one event counts one", window.add("x", 1.0) == 1.0)
@@ -35,18 +35,18 @@ func _test_windows() -> void:
 
 	# The bound is a security control: the structure must not grow without
 	# limit under exactly the traffic it exists to watch.
-	var tiny := DotSecurityWindow.new(600.0)
-	for i in range(DotSecurityWindow.MAX_ENTRIES_PER_SUBJECT + 50):
+	var tiny := GSSecurityWindow.new(600.0)
+	for i in range(GSSecurityWindow.MAX_ENTRIES_PER_SUBJECT + 50):
 		tiny.add("flood", 1.0)
 	_check("entries per subject are capped",
-		tiny.peek("flood") <= float(DotSecurityWindow.MAX_ENTRIES_PER_SUBJECT))
+		tiny.peek("flood") <= float(GSSecurityWindow.MAX_ENTRIES_PER_SUBJECT))
 
 	# ...and the cap is well above any sane threshold, so a rule has long since
 	# fired before anything was dropped.
 	_check("the cap is far above a usable threshold",
-		DotSecurityWindow.MAX_ENTRIES_PER_SUBJECT >= 128)
+		GSSecurityWindow.MAX_ENTRIES_PER_SUBJECT >= 128)
 
-	var expiring := DotSecurityWindow.new(0.1)
+	var expiring := GSSecurityWindow.new(0.1)
 	expiring.add("z", 1.0)
 	OS.delay_msec(150)
 	_check("events fall out of the window", expiring.peek("z") == 0.0)
@@ -59,25 +59,25 @@ func _test_subjects() -> void:
 	_section("[subjects]")
 
 	_check("a uid subject is prefixed",
-		DotSecuritySubject.for_uid("abc") == "uid:abc")
+		GSSecuritySubject.for_uid("abc") == "uid:abc")
 	_check("an address subject is prefixed",
-		DotSecuritySubject.for_address("1.2.3.4") == "ip:1.2.3.4")
+		GSSecuritySubject.for_address("1.2.3.4") == "ip:1.2.3.4")
 	_check("the value comes back out",
-		DotSecuritySubject.value_of("uid:abc") == "abc")
+		GSSecuritySubject.value_of("uid:abc") == "abc")
 
 	# One address, not two. Counting the mapped and unmapped spellings
 	# separately is a limit dodged by which socket the server happened to open.
 	_check("an IPv4-mapped address normalises",
-		DotSecuritySubject.for_address("::ffff:192.168.1.5") == "ip:192.168.1.5")
+		GSSecuritySubject.for_address("::ffff:192.168.1.5") == "ip:192.168.1.5")
 
 	_check("loopback is never acted on",
-		not DotSecuritySubject.may_act_on("ip:127.0.0.1"))
+		not GSSecuritySubject.may_act_on("ip:127.0.0.1"))
 	_check("an unreportable address is never acted on",
-		not DotSecuritySubject.may_act_on("ip:unknown"))
+		not GSSecuritySubject.may_act_on("ip:unknown"))
 	_check("an empty subject is never acted on",
-		not DotSecuritySubject.may_act_on(""))
+		not GSSecuritySubject.may_act_on(""))
 	_check("an ordinary address is acted on",
-		DotSecuritySubject.may_act_on("ip:203.0.113.9"))
+		GSSecuritySubject.may_act_on("ip:203.0.113.9"))
 	_done()
 
 
@@ -130,9 +130,9 @@ func _test_escalation() -> void:
 
 	var rule := _rule(&"t_ladder", &"test.ladder", 2)
 	rule.steps = [
-		DotSecurityStep.of(DotSecurityAction.Kind.WARN),
-		DotSecurityStep.of(DotSecurityAction.Kind.GAG, 300),
-		DotSecurityStep.of(DotSecurityAction.Kind.KICK),
+		GSSecurityStep.of(GSSecurityAction.Kind.WARN),
+		GSSecurityStep.of(GSSecurityAction.Kind.GAG, 300),
+		GSSecurityStep.of(GSSecurityAction.Kind.KICK),
 	]
 	guard.policy.add(rule)
 	guard._reindex()
@@ -151,13 +151,13 @@ func _test_escalation() -> void:
 		return
 
 	_check("the first offence warns",
-		entries[0].action == DotSecurityAction.Kind.WARN)
-	_check("the second gags", entries[1].action == DotSecurityAction.Kind.GAG)
+		entries[0].action == GSSecurityAction.Kind.WARN)
+	_check("the second gags", entries[1].action == GSSecurityAction.Kind.GAG)
 	_check("the gag carries its duration", entries[1].duration_sec == 300)
-	_check("the third kicks", entries[2].action == DotSecurityAction.Kind.KICK)
+	_check("the third kicks", entries[2].action == GSSecurityAction.Kind.KICK)
 	# Running out and reverting to nothing would reward persistence.
 	_check("past the end, the last rung repeats",
-		entries[3].action == DotSecurityAction.Kind.KICK)
+		entries[3].action == GSSecurityAction.Kind.KICK)
 	_check("the offence number climbs", entries[3].offence == 4)
 
 	# The cooldown is what stops a warning walking the whole ladder inside one
@@ -190,7 +190,7 @@ func _test_exemptions() -> void:
 	guard.policy.add(rule)
 	guard._reindex()
 
-	var session := DotClientSession.new()
+	var session := GSClientSession.new()
 	session.peer_id = 991
 	session.userid = 991
 	session.address = "203.0.113.50"
@@ -201,7 +201,7 @@ func _test_exemptions() -> void:
 
 	var entries := guard.ledger.search("203.0.113.50")
 	var by_flag := guard.ledger.for_subject(
-		DotSecuritySubject.of_session(session, DotSecuritySubject.Scope.UID)
+		GSSecuritySubject.of_session(session, GSSecuritySubject.Scope.UID)
 	)
 	var all: Array = entries + by_flag
 
@@ -216,7 +216,7 @@ func _test_exemptions() -> void:
 	# what an admin's traffic would have tripped is genuinely useful.
 	_check("the count still happened", all[0].count >= 1.0)
 
-	var plain := DotClientSession.new()
+	var plain := GSClientSession.new()
 	plain.peer_id = 992
 	plain.userid = 992
 	plain.address = "203.0.113.51"
@@ -224,7 +224,7 @@ func _test_exemptions() -> void:
 
 	guard.report_session(&"test.exempt", plain)
 	var high := guard.ledger.for_subject(
-		DotSecuritySubject.of_session(plain, DotSecuritySubject.Scope.UID)
+		GSSecuritySubject.of_session(plain, GSSecuritySubject.Scope.UID)
 	)
 	_check("high immunity is exempt too",
 		not high.is_empty() and not high[0].applied)
@@ -240,7 +240,7 @@ func _test_dry_run() -> void:
 	_run("sv_security_dryrun 1")
 
 	var rule := _rule(&"t_dry", &"test.dry", 1)
-	rule.steps = [DotSecurityStep.of(DotSecurityAction.Kind.BAN, 600)]
+	rule.steps = [GSSecurityStep.of(GSSecurityAction.Kind.BAN, 600)]
 	guard.policy.add(rule)
 	guard._reindex()
 
@@ -255,7 +255,7 @@ func _test_dry_run() -> void:
 	_check("dry run applies nothing", not entries[0].applied)
 	_check("and says that is why", entries[0].withheld == "dry run")
 	_check("but records what it would have done",
-		entries[0].action == DotSecurityAction.Kind.BAN
+		entries[0].action == GSSecurityAction.Kind.BAN
 		and entries[0].duration_sec == 600)
 
 	_check("the cvar turns dry run on at runtime", guard.is_dry_run())
@@ -279,7 +279,7 @@ func _test_policy_json() -> void:
 	print("")
 	_section("[rules as json]")
 
-	var policy := DotSecurityPolicy.new()
+	var policy := GSSecurityPolicy.new()
 	var loaded := policy.apply_dictionary({
 		"rules": [{
 			"id": "from_json",
@@ -305,7 +305,7 @@ func _test_policy_json() -> void:
 
 	_check("its threshold came across", rule.threshold == 4)
 	_check("its scope came across",
-		rule.scope == DotSecuritySubject.Scope.ADDRESS)
+		rule.scope == GSSecuritySubject.Scope.ADDRESS)
 	_check("its ladder came across", rule.steps.size() == 3)
 	_check("a duration on the ladder came across",
 		rule.steps[1].duration_sec == 900)
@@ -313,19 +313,19 @@ func _test_policy_json() -> void:
 		rule.steps[2].duration_sec == 3600)
 
 	_check("a bad action is refused",
-		not DotSecurityRule.from_dictionary({
+		not GSSecurityRule.from_dictionary({
 			"id": "x", "event": "y", "action": "obliterate"
 		}).ok)
 	_check("a bad scope is refused",
-		not DotSecurityRule.from_dictionary({
+		not GSSecurityRule.from_dictionary({
 			"id": "x", "event": "y", "scope": "sideways"
 		}).ok)
 	_check("a rule with no event is refused",
-		not DotSecurityRule.from_dictionary({"id": "x"}).ok)
+		not GSSecurityRule.from_dictionary({"id": "x"}).ok)
 
 	# A named rule replaces the shipped one whole. Merging would leave the
 	# shipped ladder underneath an operator who deliberately removed a rung.
-	var shipped := DotSecurityPolicy.defaults()
+	var shipped := GSSecurityPolicy.defaults()
 	shipped.apply_dictionary({
 		"rules": [{
 			"id": "chat_flood", "event": "chat.message",
@@ -338,12 +338,12 @@ func _test_policy_json() -> void:
 	_check("and replaces it whole, not field by field",
 		replaced != null and replaced.steps.is_empty())
 
-	var disabled := DotSecurityPolicy.defaults()
+	var disabled := GSSecurityPolicy.defaults()
 	disabled.apply_dictionary({"disable": ["chat_flood"]})
 	_check("a rule can be disabled by name",
 		not disabled.find(&"chat_flood").enabled)
 
-	var round_trip := DotSecurityRule.from_dictionary(
+	var round_trip := GSSecurityRule.from_dictionary(
 		policy.find(&"from_json").to_dictionary()
 	)
 	_check("a rule round-trips through a dictionary", round_trip.ok)
@@ -358,29 +358,29 @@ func _test_chat_detection() -> void:
 	var config := guard.config
 
 	_check("a short shout is not shouting",
-		not DotSecurityWatch._is_shouting("OK", config))
+		not GSSecurityWatch._is_shouting("OK", config))
 	_check("a long shout is",
-		DotSecurityWatch._is_shouting("BUY MY THING RIGHT NOW PLEASE", config))
+		GSSecurityWatch._is_shouting("BUY MY THING RIGHT NOW PLEASE", config))
 	_check("ordinary text is not",
-		not DotSecurityWatch._is_shouting("hello everyone how are you", config))
+		not GSSecurityWatch._is_shouting("hello everyone how are you", config))
 	# Counting uncased characters would make every message in a script without
 	# capitals read as shouting.
 	_check("digits and punctuation do not count as capitals",
-		not DotSecurityWatch._is_shouting("1234567890 !!! 1234567890", config))
+		not GSSecurityWatch._is_shouting("1234567890 !!! 1234567890", config))
 
 	_check("a link is spotted",
-		DotSecurityWatch._has_link("join https://example.com/x now", config))
+		GSSecurityWatch._has_link("join https://example.com/x now", config))
 	_check("plain text is not",
-		not DotSecurityWatch._has_link("no links here at all", config))
+		not GSSecurityWatch._has_link("no links here at all", config))
 
 	config.link_allow = PackedStringArray(["example.com"])
 	_check("an allowed domain is not a link",
-		not DotSecurityWatch._has_link("https://example.com/x", config))
+		not GSSecurityWatch._has_link("https://example.com/x", config))
 	config.link_allow = PackedStringArray()
 
 	# The spammer who adds a full stop each time is the whole reason the
 	# duplicate check is not an exact comparison.
-	var w := DotSecurityWatch.new()
+	var w := GSSecurityWatch.new()
 	w.guard = guard
 	_check("the first message is not a duplicate",
 		not w._is_duplicate("uid:d", "buy my thing", config))
@@ -402,42 +402,42 @@ func _test_couplings() -> void:
 
 	# GameSpice Moderation's subject prefixes.
 	_check("the uid prefix matches dot-moderation",
-		DotSecuritySubject.PREFIX_UID == DotPunishmentSubject.PREFIX_UID)
+		GSSecuritySubject.PREFIX_UID == GSPunishmentSubject.PREFIX_UID)
 	_check("the address prefix matches dot-moderation",
-		DotSecuritySubject.PREFIX_ADDRESS == DotPunishmentSubject.PREFIX_IP)
+		GSSecuritySubject.PREFIX_ADDRESS == GSPunishmentSubject.PREFIX_IP)
 	_check("a uid subject is spelled identically",
-		DotSecuritySubject.for_uid("abc") == DotPunishmentSubject.for_uid("abc"))
+		GSSecuritySubject.for_uid("abc") == GSPunishmentSubject.for_uid("abc"))
 	_check("an address subject is spelled identically",
-		DotSecuritySubject.for_address("1.2.3.4")
-			== DotPunishmentSubject.for_address("1.2.3.4"))
+		GSSecuritySubject.for_address("1.2.3.4")
+			== GSPunishmentSubject.for_address("1.2.3.4"))
 
 	# GameSpice Moderation's Kind values.
 	_check("the ban kind matches",
-		DotSecurityAction.MOD_KIND_BAN == DotPunishment.Kind.BAN)
+		GSSecurityAction.MOD_KIND_BAN == GSPunishment.Kind.BAN)
 	_check("the kick kind matches",
-		DotSecurityAction.MOD_KIND_KICK == DotPunishment.Kind.KICK)
+		GSSecurityAction.MOD_KIND_KICK == GSPunishment.Kind.KICK)
 	_check("the voice mute kind matches",
-		DotSecurityAction.MOD_KIND_VOICE_MUTE == DotPunishment.Kind.VOICE_MUTE)
+		GSSecurityAction.MOD_KIND_VOICE_MUTE == GSPunishment.Kind.VOICE_MUTE)
 	_check("the gag kind matches",
-		DotSecurityAction.MOD_KIND_GAG == DotPunishment.Kind.GAG)
+		GSSecurityAction.MOD_KIND_GAG == GSPunishment.Kind.GAG)
 	_check("the warn kind matches",
-		DotSecurityAction.MOD_KIND_WARN == DotPunishment.Kind.WARN)
+		GSSecurityAction.MOD_KIND_WARN == GSPunishment.Kind.WARN)
 
 	# GameSpice Server's refusal wording, the only way to tell a permission refusal from a mistyped command.
 	# A box rather than a local: lambdas capture locals by VALUE, so assigning to a captured String changes nothing outside.
 	var seen: Array = [""]
 	server.console.command_refused.connect(
-		func(_ctx: DotCmdContext, reason: String) -> void: seen[0] = reason,
+		func(_ctx: GSCmdContext, reason: String) -> void: seen[0] = reason,
 		CONNECT_ONE_SHOT
 	)
-	var ctx := DotCmdContext.new()
-	ctx.source = DotCmdContext.Source.CHAT
+	var ctx := GSCmdContext.new()
+	ctx.source = GSCmdContext.Source.CHAT
 	ctx.permissions = PackedStringArray()
 	ctx.reply_sink = func(_t: String) -> void: pass
 	server.console.execute("kick nobody", ctx)
 
 	_check("dot-server still refuses with the wording we match on",
-		str(seen[0]).begins_with(DotSecurityWatch.REFUSAL_PERMISSION))
+		str(seen[0]).begins_with(GSSecurityWatch.REFUSAL_PERMISSION))
 	_done()
 
 

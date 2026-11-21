@@ -1,9 +1,9 @@
-class_name DotSecurityEvent
+class_name GSSecurityEvent
 extends RefCounted
 
 ## One thing that happened, and who it is attributed to.
-## The vocabulary is open on purpose: [method DotSecurityManager.report] takes any [StringName], so a game counting its own abuse gets the whole rule engine without forking the addon.
-## Events are attributed to a subject, not a connection, so reconnecting dodges no counter. See [DotSecuritySubject].
+## The vocabulary is open on purpose: [method GSSecurityManager.report] takes any [StringName], so a game counting its own abuse gets the whole rule engine without forking the addon.
+## Events are attributed to a subject, not a connection, so reconnecting dodges no counter. See [GSSecuritySubject].
 
 
 ## Any accepted chat message.
@@ -68,7 +68,7 @@ const KNOWN: Array[StringName] = [
 ## What happened.
 var name: StringName = &""
 
-## Who it is against, already scoped. See [DotSecuritySubject].
+## Who it is against, already scoped. See [GSSecuritySubject].
 var subject: String = ""
 
 ## The account id behind it, when there is one. May be empty.
@@ -78,7 +78,7 @@ var uid: String = ""
 var address: String = ""
 
 ## The live session, when the event came from one. May be null.
-var session: DotClientSession = null
+var session: GSClientSession = null
 
 ## How much this event counts for.
 ## A rule's threshold is compared against the summed weight in its window, so a watcher can say "four times as bad" without a second event name. Ordinary events weigh 1.
@@ -93,8 +93,8 @@ static func make(
 	p_subject: String,
 	p_weight: float = 1.0,
 	p_detail: Dictionary = {}
-) -> DotSecurityEvent:
-	var event := DotSecurityEvent.new()
+) -> GSSecurityEvent:
+	var event := GSSecurityEvent.new()
 	event.name = p_name
 	event.subject = p_subject
 	event.weight = p_weight
@@ -105,12 +105,12 @@ static func make(
 ## Builds an event already attributed to a session, in the given scope.
 static func from_session(
 	p_name: StringName,
-	p_session: DotClientSession,
+	p_session: GSClientSession,
 	scope: int,
 	p_weight: float = 1.0,
 	p_detail: Dictionary = {}
-) -> DotSecurityEvent:
-	var event := DotSecurityEvent.new()
+) -> GSSecurityEvent:
+	var event := GSSecurityEvent.new()
 	event.name = p_name
 	event.session = p_session
 	event.weight = p_weight
@@ -120,7 +120,7 @@ static func from_session(
 		event.uid = p_session.uid()
 		event.address = p_session.address
 
-	event.subject = DotSecuritySubject.of_session(p_session, scope)
+	event.subject = GSSecuritySubject.of_session(p_session, scope)
 	return event
 
 

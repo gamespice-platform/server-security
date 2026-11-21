@@ -2,18 +2,18 @@
 extends EditorPlugin
 
 ## Editor entry point for GameSpice Server Security. Registers inspector types only.
-## No autoloads: a singleton would rule out a server and a client in one process. The host places the nodes and points them at a server with a [DotNodeRef].
+## No autoloads: a singleton would rule out a server and a client in one process. The host places the nodes and points them at a server with a [GSNodeRef].
 
 const _ICON := "res://addons/dot_server_security/icon_placeholder.svg"
 
 const _TYPES := [
-	["DotSecurityManager", "Node",
+	["GSSecurityManager", "Node",
 		"res://addons/dot_server_security/runtime/dot_security_manager.gd"],
-	["DotSecurityWatch", "Node",
+	["GSSecurityWatch", "Node",
 		"res://addons/dot_server_security/watch/dot_security_watch.gd"],
-	["DotBanFeeds", "Node",
+	["GSBanFeeds", "Node",
 		"res://addons/dot_server_security/banlist/dot_ban_feeds.gd"],
-	["DotAntiCheat", "Node",
+	["GSAntiCheat", "Node",
 		"res://addons/dot_server_security/anticheat/dot_anticheat.gd"],
 ]
 

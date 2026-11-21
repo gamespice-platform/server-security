@@ -1,4 +1,4 @@
-class_name DotAntiCheatEvent
+class_name GSAntiCheatEvent
 extends RefCounted
 
 ## What the anti-cheat detectors report: impossible (the server re-simulated and the claim does not fit; a rule may act at once) versus suspicious (also a very good player's day; count and show a human).
@@ -81,6 +81,6 @@ static func is_suspicious(name: StringName) -> bool:
 
 
 ## Whether a rule acting on one instance of this event can be defended.
-## [DotAntiCheatConfig] uses it to refuse a configuration that would ban on a single behavioural signal.
+## [GSAntiCheatConfig] uses it to refuse a configuration that would ban on a single behavioural signal.
 static func may_act_on_one(name: StringName) -> bool:
 	return is_impossible(name)

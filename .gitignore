@@ -11,7 +11,7 @@
 # where an addon should be and every class_name in it fails to resolve.
 #
 # dot_moderation, dot_chat and dot_auth are OPTIONAL. Every bridge to them is
-# duck-typed and no DotPunishment*/DotChat*/DotAuth* identifier appears in this
+# duck-typed and no GSPunishment*/GSChat*/GSAuth* identifier appears in this
 # addon; they are linked so the self-test runs against the real thing.
 /addons/dot_core
 /addons/dot_server

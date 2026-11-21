@@ -1,9 +1,9 @@
 @tool
-class_name DotSecurityConfig
-extends DotSecurityConfigBase
+class_name GSSecurityConfig
+extends GSSecurityConfigBase
 
 ## Everything about the guard that is not a rule.
-## Layered like every config in this family; the rules live in their own file ([member rules_file], [DotSecurityPolicy]).
+## Layered like every config in this family; the rules live in their own file ([member rules_file], [GSSecurityPolicy]).
 
 @export_group("Master")
 
@@ -115,15 +115,15 @@ func cfg_keys() -> Dictionary:
 	return CFG_KEYS
 
 
-func validate() -> DotResult:
+func validate() -> GSResult:
 	if caps_ratio <= 0.0 or caps_ratio > 1.0:
-		return DotResult.fail(
-			DotError.CODE_INVALID, "caps_ratio must be between 0 and 1."
+		return GSResult.fail(
+			GSError.CODE_INVALID, "caps_ratio must be between 0 and 1."
 		)
 
 	if ledger_size < 16:
-		return DotResult.fail(
-			DotError.CODE_INVALID, "ledger_size must be at least 16."
+		return GSResult.fail(
+			GSError.CODE_INVALID, "ledger_size must be at least 16."
 		)
 
-	return DotResult.success(self)
+	return GSResult.success(self)

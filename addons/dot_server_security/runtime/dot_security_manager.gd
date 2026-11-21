@@ -1,50 +1,50 @@
 @tool
-class_name DotSecurityManager
+class_name GSSecurityManager
 extends Node
 
-## The guard: counts what the watchers report, decides, and acts. Place one beside a [DotServer] and it attaches itself; registered as [code]dot_security[/code].
+## The guard: counts what the watchers report, decides, and acts. Place one beside a [GSServer] and it attaches itself; registered as [code]dot_security[/code].
 ## A game reports its own events through [method report] too, which is why the event vocabulary is open.
-## It ships in dry run: see [member DotSecurityConfig.dry_run].
+## It ships in dry run: see [member GSSecurityConfig.dry_run].
 
 const CHANNEL := "security"
 const SERVICE := &"dot_security"
 
 ## A rule tripped. [param applied] is false in dry run or when withheld.
-signal tripped(entry: DotSecurityLedger.Entry)
+signal tripped(entry: GSSecurityLedger.Entry)
 
 ## A rule acted on somebody. Never emitted in dry run.
 signal acted(subject: String, action: int, duration_sec: int, rule_id: StringName)
 
 @export_group("Wiring")
 
-## The server to guard. Defaults to whichever one is in [DotRegistry].
-@export var server_ref: DotNodeRef = null
+## The server to guard. Defaults to whichever one is in [GSRegistry].
+@export var server_ref: GSNodeRef = null
 
 ## How long to wait for that server, when it is found through the registry.
 @export_range(0.0, 60.0, 0.5) var attach_timeout_sec: float = 10.0
 
 @export_group("Configuration")
 
-@export var config: DotSecurityConfig = null
+@export var config: GSSecurityConfig = null
 
 ## JSON layered over [member config]. Empty skips the file layer.
 @export var config_file: String = "user://cfg/security.json"
 
 ## The rule set. Left null, the shipped defaults are used.
-@export var policy: DotSecurityPolicy = null
+@export var policy: GSSecurityPolicy = null
 
-var server: DotServer = null
+var server: GSServer = null
 
 ## Whatever registered as `dot_moderation`, or null. Duck-typed; never named.
 ## Read through [method moderation_store]: this cached value may be stale on purpose, as a value latched at [method attach] is wrong on almost every server here.
 var moderation: Object = null
 
-var ledger: DotSecurityLedger = null
+var ledger: GSSecurityLedger = null
 
-## event -> Array[DotSecurityRule], rebuilt whenever the policy changes.
+## event -> Array[GSSecurityRule], rebuilt whenever the policy changes.
 var _by_event: Dictionary = {}
 
-## rule_id -> DotSecurityWindow
+## rule_id -> GSSecurityWindow
 var _windows: Dictionary = {}
 
 ## "rule_id|subject" -> [offence_count, last_trip_unix]
@@ -60,17 +60,17 @@ func _ready() -> void:
 		return
 
 	if server_ref == null:
-		server_ref = DotNodeRef.of_service(DotServer.SERVICE)
+		server_ref = GSNodeRef.of_service(GSServer.SERVICE)
 
 	# A guard placed beside a server is ready before that server has booted and registered itself,
 	# so giving up here leaves a server unguarded with nothing in the log to say why.
-	if server_ref.mode == DotNodeRef.Mode.REGISTRY \
-			and DotRegistry.get_service(server_ref.service) == null:
-		var waited := await DotRegistry.await_service(
+	if server_ref.mode == GSNodeRef.Mode.REGISTRY \
+			and GSRegistry.get_service(server_ref.service) == null:
+		var waited := await GSRegistry.await_service(
 			server_ref.service, attach_timeout_sec
 		)
 		if not waited.ok:
-			DotLog.warn(
+			GSLog.warn(
 				CHANNEL,
 				"no server to guard: nothing is being watched",
 				{"service": String(server_ref.service)}
@@ -79,28 +79,28 @@ func _ready() -> void:
 
 	var attached := attach()
 	if not attached.ok:
-		DotLog.warn(
+		GSLog.warn(
 			CHANNEL, "could not attach", {"detail": attached.error.message}
 		)
 
 
 func _exit_tree() -> void:
-	DotRegistry.unregister_instance(SERVICE, self)
+	GSRegistry.unregister_instance(SERVICE, self)
 
 
 
-func attach() -> DotResult:
+func attach() -> GSResult:
 	if _attached:
-		return DotResult.success(self)
+		return GSResult.success(self)
 
 	var resolved := server_ref.resolve(self)
 	if not resolved.ok:
 		return resolved.wrap("A security manager needs a server.")
 
-	server = resolved.value as DotServer
+	server = resolved.value as GSServer
 	if server == null:
-		return DotResult.fail(
-			DotError.CODE_INVALID, "server_ref did not resolve to a DotServer."
+		return GSResult.fail(
+			GSError.CODE_INVALID, "server_ref did not resolve to a GSServer."
 		)
 
 	var configured := _load_config_and_policy()
@@ -112,28 +112,28 @@ func attach() -> DotResult:
 	if config.dump_rules_file != "":
 		policy.save_json_file(config.dump_rules_file)
 
-	ledger = DotSecurityLedger.new(config.ledger_size)
+	ledger = GSSecurityLedger.new(config.ledger_size)
 
-	moderation = DotRegistry.get_service(&"dot_moderation")
+	moderation = GSRegistry.get_service(&"dot_moderation")
 
-	DotRegistry.register(SERVICE, self)
+	GSRegistry.register(SERVICE, self)
 	_register_console()
 	_attached = true
 
 	_log_guarding()
 
-	return DotResult.success(self)
+	return GSResult.success(self)
 
 
 ## Layers the config file, environment and command line, then the rules file over the shipped defaults.
-func _load_config_and_policy() -> DotResult:
+func _load_config_and_policy() -> GSResult:
 	if config == null:
-		config = DotSecurityConfig.new()
+		config = GSSecurityConfig.new()
 
 	if config_file != "":
 		var loaded := config.apply_json_file(config_file)
 		if not loaded.ok:
-			DotLog.warn(
+			GSLog.warn(
 				CHANNEL,
 				"the security config file could not be read; using defaults",
 				{"detail": loaded.error.message}
@@ -147,25 +147,25 @@ func _load_config_and_policy() -> DotResult:
 		return valid
 
 	if policy == null:
-		policy = DotSecurityPolicy.defaults()
+		policy = GSSecurityPolicy.defaults()
 
 	var rules_loaded := policy.apply_json_file(config.rules_file)
 	if not rules_loaded.ok:
 		# Refused rather than partially applied. A rule file with a mistake in it
 		# would otherwise leave some rules from the file and some from the
 		# defaults, which is a rule set nobody wrote and nobody can reason about.
-		DotLog.error(
+		GSLog.error(
 			CHANNEL,
 			"the rules file was refused; the shipped defaults are in force",
 			{"detail": rules_loaded.error.message, "file": config.rules_file}
 		)
-		policy = DotSecurityPolicy.defaults()
+		policy = GSSecurityPolicy.defaults()
 
-	return DotResult.success(self)
+	return GSResult.success(self)
 
 
 func _log_guarding() -> void:
-	DotLog.info(
+	GSLog.info(
 		CHANNEL,
 		"guarding",
 		{
@@ -179,7 +179,7 @@ func _log_guarding() -> void:
 		# Named once, at boot, because the difference is invisible afterwards: a gag still happens but does not survive a reconnect.
 		# "not yet", rather than "none": a game's module publishes the store after the server boots, so this is the ordinary case.
 		# `sec_status` asks again and says what is in force.
-		DotLog.info(
+		GSLog.info(
 			CHANNEL,
 			"no moderation store yet: until one registers, punishments last only as "
 			+ "long as the connection. sec_status says what is in force now"
@@ -193,7 +193,7 @@ func moderation_store() -> Object:
 	if moderation != null and is_instance_valid(moderation):
 		return moderation
 
-	moderation = DotRegistry.get_service(&"dot_moderation")
+	moderation = GSRegistry.get_service(&"dot_moderation")
 	return moderation
 
 
@@ -207,16 +207,16 @@ func _reindex() -> void:
 		_by_event[rule.event] = list
 
 		if not _windows.has(rule.id):
-			_windows[rule.id] = DotSecurityWindow.new(rule.window_sec)
+			_windows[rule.id] = GSSecurityWindow.new(rule.window_sec)
 		else:
-			(_windows[rule.id] as DotSecurityWindow).window_sec = rule.window_sec
+			(_windows[rule.id] as GSSecurityWindow).window_sec = rule.window_sec
 
 		if config != null and config.warn_unknown_events \
-				and not DotSecurityEvent.is_known(rule.event) \
-				and not DotAntiCheatEvent.ALL.has(rule.event):
+				and not GSSecurityEvent.is_known(rule.event) \
+				and not GSAntiCheatEvent.ALL.has(rule.event):
 			# Almost always a typo. The symptom otherwise is a rule that never
 			# fires, which looks exactly like one that is working and not needed.
-			DotLog.warn(
+			GSLog.warn(
 				CHANNEL,
 				"rule '%s' watches '%s', which no shipped watcher reports"
 					% [rule.id, rule.event],
@@ -245,7 +245,7 @@ func is_dry_run() -> bool:
 
 ## Reports one event. The entry point for every watcher and for a game's own.
 ## Cheap when nothing watches the event: one dictionary lookup and a return.
-func report(event: DotSecurityEvent) -> void:
+func report(event: GSSecurityEvent) -> void:
 	if event == null or not is_enabled():
 		return
 
@@ -256,14 +256,14 @@ func report(event: DotSecurityEvent) -> void:
 	_events_seen += 1
 
 	for entry in rules:
-		var rule: DotSecurityRule = entry
+		var rule: GSSecurityRule = entry
 		_evaluate(rule, event)
 
 
 ## Convenience for a game: report by name against a session.
 func report_session(
 	event_name: StringName,
-	session: DotClientSession,
+	session: GSClientSession,
 	weight: float = 1.0,
 	detail: Dictionary = {}
 ) -> void:
@@ -277,9 +277,9 @@ func report_session(
 	# Built per scope, because the subject depends on the rule: two rules on one event with different scopes
 	# ("this account is spamming", "this address spams from a new account each time") are a supported arrangement.
 	for entry in rules:
-		var rule: DotSecurityRule = entry
-		for subject in DotSecuritySubject.all_of_session(session, rule.scope):
-			var event := DotSecurityEvent.make(event_name, subject, weight, detail)
+		var rule: GSSecurityRule = entry
+		for subject in GSSecuritySubject.all_of_session(session, rule.scope):
+			var event := GSSecurityEvent.make(event_name, subject, weight, detail)
 			event.session = session
 			if session != null:
 				event.uid = session.uid()
@@ -294,20 +294,20 @@ func report_address(
 	weight: float = 1.0,
 	detail: Dictionary = {}
 ) -> void:
-	var event := DotSecurityEvent.make(
-		event_name, DotSecuritySubject.for_address(address), weight, detail
+	var event := GSSecurityEvent.make(
+		event_name, GSSecuritySubject.for_address(address), weight, detail
 	)
 	event.address = address
 	report(event)
 
 
-func _evaluate(rule: DotSecurityRule, event: DotSecurityEvent) -> void:
+func _evaluate(rule: GSSecurityRule, event: GSSecurityEvent) -> void:
 	if event.subject == "":
 		return
 
-	var window: DotSecurityWindow = _windows.get(rule.id)
+	var window: GSSecurityWindow = _windows.get(rule.id)
 	if window == null:
-		window = DotSecurityWindow.new(rule.window_sec)
+		window = GSSecurityWindow.new(rule.window_sec)
 		_windows[rule.id] = window
 
 	var count := window.add(event.subject, event.weight)
@@ -342,15 +342,15 @@ func _evaluate(rule: DotSecurityRule, event: DotSecurityEvent) -> void:
 
 
 func _act(
-	rule: DotSecurityRule,
-	event: DotSecurityEvent,
+	rule: GSSecurityRule,
+	event: GSSecurityEvent,
 	count: float,
 	offence: int
 ) -> void:
 	var step := rule.step_for(offence)
 	var reason := rule.render_reason(count, offence)
 
-	var entry := DotSecurityLedger.Entry.new()
+	var entry := GSSecurityLedger.Entry.new()
 	entry.at = int(Time.get_unix_time_from_system())
 	entry.rule_id = rule.id
 	entry.event = event.name
@@ -367,14 +367,14 @@ func _act(
 
 	if exemption != "":
 		entry.withheld = exemption
-	elif not DotSecuritySubject.may_act_on(event.subject):
+	elif not GSSecuritySubject.may_act_on(event.subject):
 		entry.withheld = "protected subject"
 	elif is_dry_run():
 		entry.withheld = "dry run"
-	elif step.action == DotSecurityAction.Kind.NONE:
+	elif step.action == GSSecurityAction.Kind.NONE:
 		entry.withheld = "rule counts only"
 	else:
-		var applied := DotSecurityAction.apply(
+		var applied := GSSecurityAction.apply(
 			step.action,
 			event.subject,
 			step.duration_sec,
@@ -393,7 +393,7 @@ func _act(
 
 	# The counter is cleared whatever happened, including in dry run: leaving it would trip the same rule on the next event
 	# and report an escalation the behaviour did not earn, a thousand lines about one person.
-	var window: DotSecurityWindow = _windows.get(rule.id)
+	var window: GSSecurityWindow = _windows.get(rule.id)
 	if window != null:
 		window.clear_subject(event.subject)
 
@@ -404,13 +404,13 @@ func _act(
 	_notify(rule, step, entry, event, reason)
 
 
-func _log(rule: DotSecurityRule, entry: DotSecurityLedger.Entry) -> void:
+func _log(rule: GSSecurityRule, entry: GSSecurityLedger.Entry) -> void:
 	var fields := {
 		"rule": String(rule.id),
 		"subject": entry.subject,
 		"count": entry.count,
 		"offence": entry.offence,
-		"action": DotSecurityAction.kind_name(entry.action),
+		"action": GSSecurityAction.kind_name(entry.action),
 		"applied": entry.applied,
 	}
 
@@ -418,16 +418,16 @@ func _log(rule: DotSecurityRule, entry: DotSecurityLedger.Entry) -> void:
 		fields["withheld"] = entry.withheld
 
 	if rule.loud:
-		DotLog.info(CHANNEL, "rule tripped", fields)
+		GSLog.info(CHANNEL, "rule tripped", fields)
 	else:
-		DotLog.debug(CHANNEL, "rule tripped", fields)
+		GSLog.debug(CHANNEL, "rule tripped", fields)
 
 
 func _notify(
-	rule: DotSecurityRule,
-	step: DotSecurityStep,
-	entry: DotSecurityLedger.Entry,
-	event: DotSecurityEvent,
+	rule: GSSecurityRule,
+	step: GSSecurityStep,
+	entry: GSSecurityLedger.Entry,
+	event: GSSecurityEvent,
 	reason: String
 ) -> void:
 	if server == null or server.chat == null:
@@ -439,16 +439,16 @@ func _notify(
 	# naming what happened turns an automatic punishment into something they can
 	# argue with, which is also what makes a bad rule visible to the operator.
 	if config.notify_subject and entry.applied and event.session != null \
-			and not DotSecurityAction.is_removal(step.action):
+			and not GSSecurityAction.is_removal(step.action):
 		server.chat.send_system_to(event.session, message)
 
 	if not config.notify_admins:
 		return
 
 	var note := "[guard] %s: %s %s" % [
-		DotSecuritySubject.describe(entry.subject),
+		GSSecuritySubject.describe(entry.subject),
 		"would " if not entry.applied else "",
-		DotSecurityStep.of(step.action, step.duration_sec).describe(),
+		GSSecurityStep.of(step.action, step.duration_sec).describe(),
 	]
 
 	for session in server.sessions():
@@ -491,7 +491,7 @@ func offences_for(rule_id: StringName, subject: String) -> int:
 
 ## The current count in a rule's window, without recording anything.
 func count_for(rule_id: StringName, subject: String) -> float:
-	var window: DotSecurityWindow = _windows.get(rule_id)
+	var window: GSSecurityWindow = _windows.get(rule_id)
 	return window.peek(subject) if window != null else 0.0
 
 
@@ -501,7 +501,7 @@ func forget(subject: String) -> int:
 	var cleared := 0
 
 	for rule_id in _windows:
-		(_windows[rule_id] as DotSecurityWindow).clear_subject(subject)
+		(_windows[rule_id] as GSSecurityWindow).clear_subject(subject)
 
 	for key in _offences.keys():
 		if String(key).ends_with("|" + subject):
@@ -513,26 +513,26 @@ func forget(subject: String) -> int:
 
 func forget_all() -> void:
 	for rule_id in _windows:
-		(_windows[rule_id] as DotSecurityWindow).clear()
+		(_windows[rule_id] as GSSecurityWindow).clear()
 	_offences.clear()
 
 
 ## Turns one rule on or off at runtime.
-func set_rule_enabled(id: StringName, on: bool) -> DotResult:
+func set_rule_enabled(id: StringName, on: bool) -> GSResult:
 	var rule := policy.find(id)
 	if rule == null:
-		return DotResult.fail(
-			DotError.CODE_INVALID, "No rule called '%s'." % id
+		return GSResult.fail(
+			GSError.CODE_INVALID, "No rule called '%s'." % id
 		)
 
 	rule.enabled = on
 	_reindex()
-	return DotResult.success(rule)
+	return GSResult.success(rule)
 
 
 ## Rereads the rules file, so tuning does not need a restart.
-func reload_rules() -> DotResult:
-	var fresh := DotSecurityPolicy.defaults()
+func reload_rules() -> GSResult:
+	var fresh := GSSecurityPolicy.defaults()
 	var loaded := fresh.apply_json_file(config.rules_file)
 
 	if not loaded.ok:
@@ -541,7 +541,7 @@ func reload_rules() -> DotResult:
 	policy = fresh
 	_reindex()
 
-	return DotResult.success(policy.enabled_rules().size())
+	return GSResult.success(policy.enabled_rules().size())
 
 
 ## Registers the cvars and commands, waiting for the console if it is not up.
@@ -551,7 +551,7 @@ func _register_console() -> void:
 		return
 
 	if server.console != null:
-		DotSecurityCommands.register(self, server.console)
+		GSSecurityCommands.register(self, server.console)
 		return
 
 	# Registered the moment the console exists: state_changed fires through BOOTING after the console's own cvars exist,
@@ -565,7 +565,7 @@ func _on_server_state(_state: int) -> void:
 		return
 
 	server.state_changed.disconnect(_on_server_state)
-	DotSecurityCommands.register(self, server.console)
+	GSSecurityCommands.register(self, server.console)
 
 
 
@@ -607,7 +607,7 @@ func describe_lines() -> PackedStringArray:
 
 	var tracked := 0
 	for rule_id in _windows:
-		tracked += (_windows[rule_id] as DotSecurityWindow).subject_count()
+		tracked += (_windows[rule_id] as GSSecurityWindow).subject_count()
 	out.append("tracking    %d subjects, %d offence records" % [
 		tracked, _offences.size()
 	])
