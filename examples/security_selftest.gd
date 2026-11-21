@@ -187,11 +187,11 @@ func _test_ban_feed_auth() -> void:
 	feed.auth = GSBanFeed.Auth.HMAC
 	feed.token = "secret"
 	var signed := feed.headers()
-	_check("hmac sends a timestamp", signed.has("X-Dot-Timestamp"))
-	_check("hmac sends a nonce", signed.has("X-Dot-Nonce"))
-	_check("hmac sends a signature", signed.has("X-Dot-Signature"))
+	_check("hmac sends a timestamp", signed.has("X-GS-Timestamp"))
+	_check("hmac sends a nonce", signed.has("X-GS-Nonce"))
+	_check("hmac sends a signature", signed.has("X-GS-Signature"))
 	_check("nothing replayable is sent",
-		not str(signed.get("X-Dot-Signature", "")).contains("secret"))
+		not str(signed.get("X-GS-Signature", "")).contains("secret"))
 
 	# The token is a secret and must not be reachable from the environment or
 	# argv, both of which are readable by other processes and end up in `ps`.
@@ -505,7 +505,7 @@ func _test_without_moderation() -> void:
 		loopback.ok and str(loopback.value).contains("exempt"))
 
 	# ...and with the real store present, the same call records durably.
-	var mod := GSRegistry.get_service(&"dot_moderation")
+	var mod := GSRegistry.get_service(&"gs_moderation")
 	_check("the real moderation store is installed for this suite", mod != null)
 
 	if mod == null:
@@ -516,7 +516,7 @@ func _test_without_moderation() -> void:
 		mod, server, null
 	)
 	_check("with a store, it records with no session at all", durable.ok)
-	_check("and dot-moderation holds the record",
+	_check("and gs-moderation holds the record",
 		mod.call("is_gagged_key", "uid:durable-test"))
 
 	# The guard attaches BEFORE the store exists (the game's module loads after the server boots), and latching that null

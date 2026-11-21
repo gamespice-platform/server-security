@@ -4,7 +4,7 @@ Short versions of what the source comments used to carry in full; each is a deci
 
 ## Count against the account or address, never the connection
 
-A peer id dies with the socket, so "five messages in ten seconds" is dodged by reconnecting. UID scope follows a person across addresses and does not punish a sibling on the same connection; ADDRESS scope covers what happens before any identity exists (connection floods, wrong RCON passwords, authentication that never completed); BOTH counts the event in each scope and is not the default because it doubles the counters. The `PREFIX_UID`/`PREFIX_ADDRESS` spellings mirror dot-moderation's, which this addon must not name, and the self-test asserts them against the real addon.
+A peer id dies with the socket, so "five messages in ten seconds" is dodged by reconnecting. UID scope follows a person across addresses and does not punish a sibling on the same connection; ADDRESS scope covers what happens before any identity exists (connection floods, wrong RCON passwords, authentication that never completed); BOTH counts the event in each scope and is not the default because it doubles the counters. The `PREFIX_UID`/`PREFIX_ADDRESS` spellings mirror gs-moderation's, which this addon must not name, and the self-test asserts them against the real addon.
 
 ## Windows are bounded because the guard is an attack target
 

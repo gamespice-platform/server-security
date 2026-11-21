@@ -3,9 +3,9 @@ extends Node
 ## The yml layout of GameSpice Server Security's settings: new path, flat shim, operator layer.
 ## Run: timeout 120 godot --headless --path . res://examples/cfg_selftest.tscn
 
-const FOLDER := "dot_server_security"
+const FOLDER := "gs_server_security"
 const FILE := "security.yml"
-const LEGACY := "user://dot_server_security_cfg_selftest_legacy"
+const LEGACY := "user://gs_server_security_cfg_selftest_legacy"
 
 const SECTIONS := 1
 const CHECKS := 8
@@ -21,7 +21,7 @@ func _ready() -> void:
 
 
 func _run() -> void:
-	print("dot-server-security cfg self-test")
+	print("gs-server-security cfg self-test")
 	var addon_dir := "user://cfg/addons/" + FOLDER
 	var server_dir := "user://cfg/server/addons/" + FOLDER
 	_clean(addon_dir, server_dir)

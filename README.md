@@ -9,7 +9,7 @@ Every rule starts in dry run. It counts, logs and fills in `sec_status`, and pun
 ## Install
 
 1. Get [Godot 4.7](https://godotengine.org/download).
-2. Either use [GameSpice Bootstrap](https://github.com/gamespice-platform/bootstrap), which clones every project and links the addons, or copy `addons/dot_server_security/`, [GameSpice Core](https://github.com/gamespice-platform/core)'s `addons/dot_core/` and [GameSpice Server](https://github.com/gamespice-platform/server)'s `addons/dot_server/` into your project and enable dot-server-security in *Project > Project Settings > Plugins*.
+2. Either use [GameSpice Bootstrap](https://github.com/gamespice-platform/bootstrap), which clones every project and links the addons, or copy `addons/gs_server_security/`, [GameSpice Core](https://github.com/gamespice-platform/core)'s `addons/gs_core/` and [GameSpice Server](https://github.com/gamespice-platform/server)'s `addons/gs_server/` into your project and enable gs-server-security in *Project > Project Settings > Plugins*.
 
 ```gdscript
 var guard := GSSecurityManager.new()
@@ -106,7 +106,7 @@ Any number of endpoints, merged, cached and consulted on every join.
 | Cache | Written to disk, so a restart during an outage still enforces. |
 | `on_failure` | `keep_last` (default), `ignore` or `refuse_all` |
 
-Tokens come from a file (`token_file`), never the environment or command line. GameSpice Moderation registers under the same `dot_ban_source` name, so both are asked and both must say yes.
+Tokens come from a file (`token_file`), never the environment or command line. GameSpice Moderation registers under the same `gs_ban_source` name, so both are asked and both must say yes.
 
 ## With and without Moderation
 

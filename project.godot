@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="dot-server-security"
+config/name="gs-server-security"
 config/description="Server hardening as configuration: sliding-window rules over chat, connections, authentication and RCON, with escalating automatic punishment."
 config/version="0.1.0"
 run/main_scene="res://examples/security_selftest.tscn"
@@ -18,7 +18,7 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/dot_core/plugin.cfg", "res://addons/dot_server/plugin.cfg", "res://addons/dot_server_security/plugin.cfg")
+enabled=PackedStringArray("res://addons/gs_core/plugin.cfg", "res://addons/gs_server/plugin.cfg", "res://addons/gs_server_security/plugin.cfg")
 
 [importer_defaults]
 

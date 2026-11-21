@@ -33,7 +33,7 @@ func _ready() -> void:
 	config.max_players = 16
 	config.tickrate = 30
 	config.rcon_password = ""
-	config.hostname = "dot-server-security self-test"
+	config.hostname = "gs-server-security self-test"
 	config.query_enabled = false
 	config.a2s_enabled = false
 	config.admins_path = "user://secexample/admins.json"

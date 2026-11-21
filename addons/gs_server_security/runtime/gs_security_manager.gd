@@ -2,12 +2,12 @@
 class_name GSSecurityManager
 extends Node
 
-## The guard: counts what the watchers report, decides, and acts. Place one beside a [GSServer] and it attaches itself; registered as [code]dot_security[/code].
+## The guard: counts what the watchers report, decides, and acts. Place one beside a [GSServer] and it attaches itself; registered as [code]gs_security[/code].
 ## A game reports its own events through [method report] too, which is why the event vocabulary is open.
 ## It ships in dry run: see [member GSSecurityConfig.dry_run].
 
 const CHANNEL := "security"
-const SERVICE := &"dot_security"
+const SERVICE := &"gs_security"
 
 ## A rule tripped. [param applied] is false in dry run or when withheld.
 signal tripped(entry: GSSecurityLedger.Entry)
@@ -35,7 +35,7 @@ signal acted(subject: String, action: int, duration_sec: int, rule_id: StringNam
 
 var server: GSServer = null
 
-## Whatever registered as `dot_moderation`, or null. Duck-typed; never named.
+## Whatever registered as `gs_moderation`, or null. Duck-typed; never named.
 ## Read through [method moderation_store]: this cached value may be stale on purpose, as a value latched at [method attach] is wrong on almost every server here.
 var moderation: Object = null
 
@@ -114,7 +114,7 @@ func attach() -> GSResult:
 
 	ledger = GSSecurityLedger.new(config.ledger_size)
 
-	moderation = GSRegistry.get_service(&"dot_moderation")
+	moderation = GSRegistry.get_service(&"gs_moderation")
 
 	GSRegistry.register(SERVICE, self)
 	_register_console()
@@ -193,7 +193,7 @@ func moderation_store() -> Object:
 	if moderation != null and is_instance_valid(moderation):
 		return moderation
 
-	moderation = GSRegistry.get_service(&"dot_moderation")
+	moderation = GSRegistry.get_service(&"gs_moderation")
 	return moderation
 
 
@@ -597,7 +597,7 @@ func describe_lines() -> PackedStringArray:
 		policy.enabled_rules().size(), policy.rules.size()
 	])
 	out.append("store       %s" % (
-		"dot-moderation (durable)" if moderation_store() != null
+		"gs-moderation (durable)" if moderation_store() != null
 			else "session only (lost on reconnect)"
 	))
 	out.append("seen        %d events" % _events_seen)

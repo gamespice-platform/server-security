@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://dotsec0selftest1"]
+[gd_scene load_steps=2 format=3 uid="uid://gssec0selftest1"]
 
 [ext_resource type="Script" path="res://examples/security_selftest.gd" id="1_s"]
 

@@ -1,10 +1,10 @@
 # GameSpice Server Security
 
-Hardening a dedicated server, as configuration: sliding-window rules over chat, connections, authentication, the remote console and the anti-cheat detectors, escalating through warn, gag, mute, kick and ban; anti-cheat that splits "the server proved it" from "a human should look"; and external ban-list feeds chained into dot-server's `dot_ban_source`. Ships in dry run.
+Hardening a dedicated server, as configuration: sliding-window rules over chat, connections, authentication, the remote console and the anti-cheat detectors, escalating through warn, gag, mute, kick and ban; anti-cheat that splits "the server proved it" from "a human should look"; and external ban-list feeds chained into gs-server's `gs_ban_source`. Ships in dry run.
 
 Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is specific to this addon. The reasoning is in [docs/](docs/README.md).
 
-**The distributable is `addons/dot_server_security/`.** It requires GameSpice Core and GameSpice Server. GameSpice Moderation, GameSpice Chat and GameSpice Auth are optional, discovered at runtime and named nowhere; the suite wants all three linked (`.gitignore`), because linking the real addons is what checks the couplings against the thing they describe rather than a mock.
+**The distributable is `addons/gs_server_security/`.** It requires GameSpice Core and GameSpice Server. GameSpice Moderation, GameSpice Chat and GameSpice Auth are optional, discovered at runtime and named nowhere; the suite wants all three linked (`.gitignore`), because linking the real addons is what checks the couplings against the thing they describe rather than a mock.
 
 ## Read before
 
@@ -20,21 +20,21 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 
 | Path | What |
 | --- | --- |
-| `addons/dot_server_security/core/` | `GSSecurityEvent` (an open vocabulary), `GSSecuritySubject` (uid / address / both), `GSSecurityAction` (and its two backends), `GSSecurityStep`, `GSSecurityRule` and its JSON form, `GSSecurityPolicy` (the shipped set, and layering a file over it), `GSSecurityWindow`, `GSSecurityConfig` |
-| `addons/dot_server_security/runtime/` | `GSSecurityManager` (counts, decides, acts; registered as `dot_security`), `GSSecurityLedger` (what `sec_why` answers from) |
-| `addons/dot_server_security/watch/` | `GSSecurityWatch`: wires chat, connections, RCON, commands and auth |
-| `addons/dot_server_security/anticheat/` | `GSAntiCheatEvent` (the impossible/suspicious split), `GSAntiCheatConfig`, `GSAntiCheat` |
-| `addons/dot_server_security/banlist/` | `GSBanFeed` (one endpoint), `GSBanIndex` (the merged list), `GSBanFeeds` (fetch, merge, cache, chain) |
-| `addons/dot_server_security/console/` | `GSSecurityCommands`: the operator's whole view; `sec_why` is the one |
-| `addons/dot_server_security/cfg/` | `security_rules.example.json`, `ban_feeds.example.json` |
+| `addons/gs_server_security/core/` | `GSSecurityEvent` (an open vocabulary), `GSSecuritySubject` (uid / address / both), `GSSecurityAction` (and its two backends), `GSSecurityStep`, `GSSecurityRule` and its JSON form, `GSSecurityPolicy` (the shipped set, and layering a file over it), `GSSecurityWindow`, `GSSecurityConfig` |
+| `addons/gs_server_security/runtime/` | `GSSecurityManager` (counts, decides, acts; registered as `gs_security`), `GSSecurityLedger` (what `sec_why` answers from) |
+| `addons/gs_server_security/watch/` | `GSSecurityWatch`: wires chat, connections, RCON, commands and auth |
+| `addons/gs_server_security/anticheat/` | `GSAntiCheatEvent` (the impossible/suspicious split), `GSAntiCheatConfig`, `GSAntiCheat` |
+| `addons/gs_server_security/banlist/` | `GSBanFeed` (one endpoint), `GSBanIndex` (the merged list), `GSBanFeeds` (fetch, merge, cache, chain) |
+| `addons/gs_server_security/console/` | `GSSecurityCommands`: the operator's whole view; `sec_why` is the one |
+| `addons/gs_server_security/cfg/` | `security_rules.example.json`, `ban_feeds.example.json` |
 | `examples/security_selftest.tscn` | the suite, against the real GameSpice Moderation |
-| `examples/cfg_selftest.tscn` | `security.yml` through `GSSecurityConfig.load_cfg` and `GSAntiCheatConfig.load_cfg`: `cfg/addons/dot_server_security/`, `cfg/server/addons/dot_server_security/` over it, the flat `cfg/security.yml` shim (WARN once, removed 2026-12-31) |
+| `examples/cfg_selftest.tscn` | `security.yml` through `GSSecurityConfig.load_cfg` and `GSAntiCheatConfig.load_cfg`: `cfg/addons/gs_server_security/`, `cfg/server/addons/gs_server_security/` over it, the flat `cfg/security.yml` shim (WARN once, removed 2026-12-31) |
 
 ## Running and testing
 
 - The family's two steps ([family CLAUDE.md](../../CLAUDE.md#validating-anything)), then `godot --headless --path . res://examples/security_selftest.tscn` (non-zero on failure).
 - The suite runs against the real GameSpice Moderation, GameSpice Chat and GameSpice Auth; never replace them with mocks. [rules](docs/rules.md#the-couplings-and-why-they-are-tested-rather-than-commented)
-- dot-server-deploy builds this for every server it runs (`TmcHost._build_security()`, `cfg/security.yml`); a change to the console surface should still pass its `./server check`. [history](docs/history.md#the-guard-was-linked-and-never-built)
+- gs-server-deploy builds this for every server it runs (`TmcHost._build_security()`, `cfg/security.yml`); a change to the console surface should still pass its `./server check`. [history](docs/history.md#the-guard-was-linked-and-never-built)
 
 ## Rules that bite
 
@@ -49,7 +49,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 **Couplings**
 
 - `PREFIX_UID`/`PREFIX_ADDRESS`, `MOD_KIND_*` and `REFUSAL_PERMISSION` reproduce values from GameSpice Moderation and GameSpice Server, and the suite asserts each against the real addon. [rules](docs/rules.md#the-couplings-and-why-they-are-tested-rather-than-commented)
-- Act on both halves: the durable record and the session. `SILENCE` is two records, gag first; `issue()` uses maximum issuer immunity. [rules](docs/rules.md#acting-with-and-without-dot-moderation)
+- Act on both halves: the durable record and the session. `SILENCE` is two records, gag first; `issue()` uses maximum issuer immunity. [rules](docs/rules.md#acting-with-and-without-gs-moderation)
 - Never latch the moderation store at attach: `moderation_store()` looks again until it finds one, and so do `describe()` and `sec_status`. [rules](docs/rules.md#finding-the-moderation-store)
 - The console registers after the server's `state_changed`. [rules](docs/rules.md#finding-the-moderation-store)
 
@@ -61,7 +61,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 
 **Ban feeds**
 
-- `GSBanFeeds` chains into `dot_ban_source` (capture before registering), re-chains on every registry change, and stops when the newcomer's `previous_source` chain already reaches it. [ban-feeds](docs/ban-feeds.md#it-chains-and-stays-on-top)
+- `GSBanFeeds` chains into `gs_ban_source` (capture before registering), re-chains on every registry change, and stops when the newcomer's `previous_source` chain already reaches it. [ban-feeds](docs/ban-feeds.md#it-chains-and-stays-on-top)
 - Plain HTTP refused without `allow_insecure`; missing credentials refused at boot; one bad feed skipped; disk cache loaded stale; expired entries dropped at parse; CIDR matched, not expanded; credentials from `token_file`. [ban-feeds](docs/ban-feeds.md#decisions-worth-not-undoing)
 
 Deliberately not here: a client-side component, machine learning over aim traces (`observe_aim`/`observe_trigger` are the hooks), wallhack detection, its own ban storage, rate limiting game traffic. [rules](docs/rules.md#deliberately-not-here)

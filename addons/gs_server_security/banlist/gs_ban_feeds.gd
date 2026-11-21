@@ -2,14 +2,14 @@
 class_name GSBanFeeds
 extends Node
 
-## Fetches external ban lists, merges them, and refuses the people on them. Registers as [code]dot_ban_source[/code], the seam GameSpice Server already asks on every admission.
+## Fetches external ban lists, merges them, and refuses the people on them. Registers as [code]gs_ban_source[/code], the seam GameSpice Server already asks on every admission.
 ## It chains rather than replaces: GameSpice Moderation registers under the same name, so whichever readies second would silently win. Whatever was registered before is kept and asked too, and both must say "admit".
 
 const CHANNEL := "security"
-const SERVICE := &"dot_security_bans"
+const SERVICE := &"gs_security_bans"
 
 ## The seam GameSpice Server asks. GameSpice Moderation publishes the same name.
-const BAN_SOURCE := &"dot_ban_source"
+const BAN_SOURCE := &"gs_ban_source"
 
 ## A fetch finished, for good or ill.
 signal fetched(feed_id: StringName, result: GSResult, entries: int)
@@ -30,7 +30,7 @@ signal list_changed(total: int)
 ## Fetch every feed as soon as this node is ready.
 @export var fetch_on_ready: bool = true
 
-## Also consult whatever was registered as `dot_ban_source` before this node.
+## Also consult whatever was registered as `gs_ban_source` before this node.
 ## Off means this node replaces GameSpice Moderation's enforcement instead of adding to it, almost never wanted.
 @export var chain_previous: bool = true
 
@@ -40,7 +40,7 @@ signal list_changed(total: int)
 
 var index := GSBanIndex.new()
 
-## Whatever held `dot_ban_source` before this node did. Duck-typed; never named.
+## Whatever held `gs_ban_source` before this node did. Duck-typed; never named.
 var previous_source: Object = null
 
 ## feed id -> Array of {uid, address, reason}, as last fetched or cached.
@@ -186,7 +186,7 @@ static func _chain_reaches(start: Object, target: Object) -> bool:
 
 
 
-## Whether this person may join. The contract behind `dot_ban_source`.
+## Whether this person may join. The contract behind `gs_ban_source`.
 ## Asked twice per join: address alone before anybody has said who they are, then both.
 func check_admission(uid: String, address: String) -> GSResult:
 	# Anything still fetching for the first time with REFUSE_ALL set fails

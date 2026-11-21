@@ -401,9 +401,9 @@ func _test_couplings() -> void:
 	_section("[couplings to addons we must not name]")
 
 	# GameSpice Moderation's subject prefixes.
-	_check("the uid prefix matches dot-moderation",
+	_check("the uid prefix matches gs-moderation",
 		GSSecuritySubject.PREFIX_UID == GSPunishmentSubject.PREFIX_UID)
-	_check("the address prefix matches dot-moderation",
+	_check("the address prefix matches gs-moderation",
 		GSSecuritySubject.PREFIX_ADDRESS == GSPunishmentSubject.PREFIX_IP)
 	_check("a uid subject is spelled identically",
 		GSSecuritySubject.for_uid("abc") == GSPunishmentSubject.for_uid("abc"))
@@ -436,7 +436,7 @@ func _test_couplings() -> void:
 	ctx.reply_sink = func(_t: String) -> void: pass
 	server.console.execute("kick nobody", ctx)
 
-	_check("dot-server still refuses with the wording we match on",
+	_check("gs-server still refuses with the wording we match on",
 		str(seen[0]).begins_with(GSSecurityWatch.REFUSAL_PERMISSION))
 	_done()
 

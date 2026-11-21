@@ -2,7 +2,7 @@ class_name GSSecurityAction
 extends RefCounted
 
 ## What a rule does when it trips, and the two backends that can do it.
-## Each action has a durable form (a GameSpice Moderation record, surviving reconnect) and a fallback (session flags, gone with the connection); both are supported so this addon does not depend on another optional one. GameSpice Moderation is reached duck-typed via `dot_moderation`, never named, since a missing class_name fails to parse.
+## Each action has a durable form (a GameSpice Moderation record, surviving reconnect) and a fallback (session flags, gone with the connection); both are supported so this addon does not depend on another optional one. GameSpice Moderation is reached duck-typed via `gs_moderation`, never named, since a missing class_name fails to parse.
 
 enum Kind {
 	## Count and remember, do nothing. What a rule is set to while it is being
@@ -81,7 +81,7 @@ static func format_duration(seconds: int) -> String:
 
 
 ## Carries out an action. Returns what was done, for the ledger.
-## [param moderation] is whatever registered as `dot_moderation`, or null. [param session] may be null (an address that never finished connecting): then only the durable backend can act.
+## [param moderation] is whatever registered as `gs_moderation`, or null. [param session] may be null (an address that never finished connecting): then only the durable backend can act.
 static func apply(
 	kind: int,
 	subject: String,

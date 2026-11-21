@@ -78,7 +78,7 @@ enum OnFailure {
 
 @export_group("Parsing")
 
-## Where the list lives in the response, as dot-separated keys.
+## Where the list lives in the response, as gs-separated keys.
 ## Empty treats the whole document as the list; `data.bans` reaches `{"data": {"bans": [...]}}`.
 @export var list_path: String = ""
 
@@ -181,9 +181,9 @@ func headers() -> Dictionary:
 				# Signed over timestamp, nonce and the path, so a signature
 				# captured from one request cannot be replayed against another.
 				var payload := "%d.%s.%s" % [ts, nonce, url]
-				out["X-Dot-Timestamp"] = str(ts)
-				out["X-Dot-Nonce"] = nonce
-				out["X-Dot-Signature"] = GSHash.hmac_sha256_hex(
+				out["X-GS-Timestamp"] = str(ts)
+				out["X-GS-Nonce"] = nonce
+				out["X-GS-Signature"] = GSHash.hmac_sha256_hex(
 					credential, payload
 				)
 

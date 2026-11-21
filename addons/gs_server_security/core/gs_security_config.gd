@@ -85,7 +85,7 @@ extends GSSecurityConfigBase
 
 
 func env_prefix() -> String:
-	return "DOT_SECURITY_"
+	return "GS_SECURITY_"
 
 
 func cli_prefix() -> String:

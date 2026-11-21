@@ -17,7 +17,7 @@ a game ────┘                              │
                                    step N of the ladder
                                           │
                         ┌─────────────────┴─────────────────┐
-                   dot-moderation                    the session itself
+                   gs-moderation                    the session itself
                    (durable record)                  (dies with the socket)
 ```
 
@@ -53,7 +53,7 @@ A fixed bucket that resets on a boundary is walked straight through: five messag
 
 ## The couplings, and why they are tested rather than commented
 
-dot-moderation, dot-chat and dot-auth are optional, and a script mentioning a `class_name` the project does not have fails to parse *and takes every script referencing it down with it*, which for a security addon means the guard stops existing rather than stops watching one source. So three values defined in other repositories are reproduced here:
+gs-moderation, gs-chat and gs-auth are optional, and a script mentioning a `class_name` the project does not have fails to parse *and takes every script referencing it down with it*, which for a security addon means the guard stops existing rather than stops watching one source. So three values defined in other repositories are reproduced here:
 
 | Here | There | If they drift |
 | --- | --- | --- |

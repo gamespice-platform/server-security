@@ -1,10 +1,10 @@
 # External ban lists
 
-`GSBanFeeds` registers as `dot_ban_source`, the seam GameSpice Server already asks on every admission, so nothing in GameSpice Server changes.
+`GSBanFeeds` registers as `gs_ban_source`, the seam GameSpice Server already asks on every admission, so nothing in GameSpice Server changes.
 
 ## It chains, and stays on top
 
-**It chains rather than replaces, and that is the bug it exists to avoid.** dot-moderation registers under the same name; whichever readied second would silently win, leaving a deployment with both installed enforcing exactly one.
+**It chains rather than replaces, and that is the bug it exists to avoid.** gs-moderation registers under the same name; whichever readied second would silently win, leaving a deployment with both installed enforcing exactly one.
 
 - Whatever held the name is captured **before** registering. Capture after and the node finds itself and recurses until the stack gives out. Both must say yes.
 - **It is kept on top, not put there once.** A game's module registers GameSpice Moderation under the same name on every changelevel, and the registry is last-wins, so a chain captured only at `_ready` is displaced by the first level change and the feeds are never asked again. `GSBanFeeds` listens to `GSRegistry.signals()` and, deferred, chains onto whoever arrived and registers itself again.

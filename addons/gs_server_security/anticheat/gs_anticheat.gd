@@ -6,7 +6,7 @@ extends Node
 ## There is no client-side component; wallhacks are stopped by interest management in the netcode, not detection (docs/anticheat.md).
 
 const CHANNEL := "anticheat"
-const SERVICE := &"dot_anticheat"
+const SERVICE := &"gs_anticheat"
 
 ## The longest client-supplied string a logged detection carries. See [method _loggable].
 const LOGGED_STRING_MAX := 96

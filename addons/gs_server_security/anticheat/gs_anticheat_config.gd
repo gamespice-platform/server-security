@@ -97,7 +97,7 @@ extends GSSecurityConfigBase
 
 
 func env_prefix() -> String:
-	return "DOT_ANTICHEAT_"
+	return "GS_ANTICHEAT_"
 
 
 func cli_prefix() -> String:

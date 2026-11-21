@@ -111,7 +111,7 @@ func _on_server_message_blocked(session: GSClientSession, reason: String) -> voi
 
 ## GameSpice Chat's router, reached by registry name and connected by signal name.
 func _wire_chat_router() -> void:
-	var router := GSRegistry.get_service(&"dot_chat_router")
+	var router := GSRegistry.get_service(&"gs_chat_router")
 	if router == null or not is_instance_valid(router):
 		return
 
@@ -375,7 +375,7 @@ func _session_for(peer: int) -> GSClientSession:
 
 
 func _wire_auth() -> void:
-	var auth := GSRegistry.get_service(&"dot_auth_server")
+	var auth := GSRegistry.get_service(&"gs_auth_server")
 	if auth == null or not is_instance_valid(auth):
 		return
 
