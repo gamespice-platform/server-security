@@ -33,6 +33,6 @@ logs/
 Thumbs.db
 
 # Linked addons (separate repositories, symlinked in for local development).
-/addons/dot_cloud
-/addons/dot_sql
-/addons/dot_voice
+/addons/gs_cloud
+/addons/gs_sql
+/addons/gs_voice
