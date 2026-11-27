@@ -2,6 +2,8 @@
 
 Watches what happens on a dedicated server, counts it against rules an operator writes, and escalates (warn, gag, mute, kick, ban) without anybody having to be awake. It also checks join attempts against external ban lists and has server-side anti-cheat checks.
 
+A GameSpice addon under the MIT licence, built with Claude Code. Run `examples/security_selftest.tscn` headless to see the rules, bans and detectors work. The games in [Zee's Games](https://zeesgames.com) are built on GameSpice addons and run on live servers; none of them vendors this one yet, so treat the thresholds as untuned and keep dry run on. Bug reports go to the [issue tracker](https://github.com/gamespice-platform/server-security/issues).
+
 ## Ships doing nothing
 
 Every rule starts in dry run. It counts, logs and fills in `sec_status`, and punishes nobody until you say so. Run it for a week, read `sec_status`, then set `sv_security_dryrun 0`. An addon that punishes an existing community on thresholds nobody chose gets uninstalled after the first false positive.
@@ -136,8 +138,12 @@ With GameSpice Moderation a gag is a stored, expiring, revocable record that sur
 
 Import the project once, then run `examples/security_selftest.tscn` headless with Godot.
 
-## Status and licence
+## Used by
 
-Part of the [**GameSpice**](https://gamespice.net) platform: a family of Godot addons. Written with Claude Code and maintained by `gamemann`. Every addon has headless tests, but little of this has been played by real users yet, so expect rough edges and please [open an issue](https://github.com/gamespice-platform/server-security/issues) when you hit one.
+No shipped game uses it yet; the example scene shows it.
+
+The whole collection is at [zeesgames.com](https://zeesgames.com).
+
+## Licence
 
 MIT licence, see [LICENSE](LICENSE). The only closed part of the [**GameSpice**](https://gamespice.net) platform is the web back end; you can use your own instead of GameSpice's.
